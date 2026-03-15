@@ -211,6 +211,10 @@ html, body, #root {
   flex-shrink: 0;
 }
 
+[data-platform="darwin"] .composer-header {
+  padding-left: 80px;
+}
+
 .logo-small {
   display: flex;
   align-items: center;
@@ -252,16 +256,21 @@ html, body, #root {
 
 .logout-btn {
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text3);
   cursor: pointer;
-  font-size: 14px;
-  padding: 4px 6px;
+  font-size: 11px;
+  padding: 3px 8px;
   border-radius: 4px;
-  transition: color 0.2s;
+  transition: color 0.2s, border-color 0.2s;
+  -webkit-app-region: no-drag;
+  white-space: nowrap;
 }
 
-.logout-btn:hover { color: var(--danger); }
+.logout-btn:hover {
+  color: var(--danger);
+  border-color: rgba(255, 34, 68, 0.4);
+}
 
 /* Compose area */
 .compose-area {

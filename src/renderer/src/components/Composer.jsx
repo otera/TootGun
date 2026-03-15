@@ -135,7 +135,7 @@ export default function Composer({ account, onLogout }) {
             onError={(e) => { e.target.style.display = 'none' }}
           />
           <span className="acct-name">@{account.acct}</span>
-          <button className="logout-btn" onClick={onLogout} title="ログアウト">✕</button>
+          <button className="logout-btn" onClick={onLogout} title="ログアウト">⏏ ログアウト</button>
         </div>
       </div>
 
