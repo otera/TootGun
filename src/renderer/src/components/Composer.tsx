@@ -20,7 +20,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [sparks, setSparks] = useState<Spark[]>([])
   const [lastPosts, setLastPosts] = useState<PostHistory[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [visibility, setVisibility] = useState<Visibility>('unlisted')
+  const [visibility, setVisibility] = useState<Visibility>('public')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -30,9 +30,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       const savedHashtags = (await window.api.store.get('hashtags')) as string[] | undefined
       const savedActive = (await window.api.store.get('activeHashtags')) as string[] | undefined
       const savedPosts = (await window.api.store.get('lastPosts')) as PostHistory[] | undefined
+      const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
       if (savedHashtags) setHashtags(savedHashtags)
       if (savedActive) setActiveHashtags(savedActive)
       if (savedPosts) setLastPosts(savedPosts)
+      if (savedVisibility) setVisibility(savedVisibility)
     }
     load()
     textareaRef.current?.focus()
@@ -165,7 +167,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
           <select
             className="visibility-select"
             value={visibility}
-            onChange={(e) => setVisibility(e.target.value as Visibility)}
+            onChange={async (e) => {
+              const v = e.target.value as Visibility
+              setVisibility(v)
+              await window.api.store.set('visibility', v)
+            }}
           >
             <option value="public">🌍 公開</option>
             <option value="unlisted">🔓 未収載</option>
