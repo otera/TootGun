@@ -198,7 +198,6 @@ export default function Composer({ account, onLogout }: ComposerProps) {
           onClick={handlePost}
           disabled={!canPost}
         >
-          <span className="toot-btn-icon">🔫</span>
           <span className="toot-btn-text">{posting ? 'FIRING...' : 'TOOT!'}</span>
         </button>
 
