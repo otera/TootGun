@@ -20,7 +20,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [sparks, setSparks] = useState<Spark[]>([])
   const [lastPosts, setLastPosts] = useState<PostHistory[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [visibility, setVisibility] = useState<Visibility>('public')
+  const [visibility, setVisibility] = useState<Visibility>('unlisted')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
