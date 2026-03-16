@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import iconPng from './assets/icon.png'
 import Composer from './components/Composer'
 import Settings from './components/Settings'
 import type { MastodonAccount } from './types'
@@ -43,7 +44,7 @@ export default function App() {
   if (screen === 'loading') {
     return (
       <div className="loading-screen">
-        <div className="loading-gun">🔫</div>
+        <img className="loading-gun" src={iconPng} alt="TootGun" />
       </div>
     )
   }
