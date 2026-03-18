@@ -131,7 +131,6 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       {/* Header */}
       <div className="composer-header">
         <div className="logo-small">
-          <span>🔫</span>
           <span className="logo-text-small">TootGun</span>
         </div>
         <div className="account-info">

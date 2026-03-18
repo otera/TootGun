@@ -40,7 +40,6 @@ export default function Settings({ onSaved }: SettingsProps) {
     <div className="settings-screen">
       <div className="settings-header">
         <div className="logo">
-          <span className="logo-icon">🔫</span>
           <span className="logo-text">TootGun</span>
         </div>
         <p className="logo-tagline">1秒に3発、想いをブチ込め。</p>
@@ -78,7 +77,7 @@ export default function Settings({ onSaved }: SettingsProps) {
         {status && <div className={`status-msg ${status.type}`}>{status.text}</div>}
 
         <button type="submit" className="connect-btn" disabled={loading}>
-          {loading ? '接続中...' : '🔫 接続する'}
+          {loading ? '接続中...' : '接続する'}
         </button>
       </form>
     </div>
