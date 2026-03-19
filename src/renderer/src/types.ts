@@ -48,6 +48,12 @@ export interface Particle extends Spark {
   py: number
 }
 
+export interface OAuthCallbackData {
+  token?: string
+  account?: MastodonAccount
+  error?: string
+}
+
 // window.api bridge type
 export interface ElectronAPI {
   platform: string
@@ -59,6 +65,8 @@ export interface ElectronAPI {
   mastodon: {
     post: (params: PostParams) => Promise<unknown>
     verify: (params: VerifyParams) => Promise<MastodonAccount>
+    startOAuth: (serverUrl: string) => Promise<void>
+    onOAuthCallback: (callback: (data: OAuthCallbackData) => void) => () => void
   }
 }
 
