@@ -82,14 +82,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const handlePost = async () => {
     if (!canPost) return
 
-    const serverUrl = (await window.api.store.get('serverUrl')) as string
-    const token = (await window.api.store.get('token')) as string
-
     setPosting(true)
     setError(null)
 
     try {
-      await window.api.mastodon.post({ serverUrl, token, status: fullText, visibility })
+      await window.api.mastodon.post({ status: fullText, visibility })
       fireEffect()
 
       // Save to history

@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   mastodon: {
     post: (params: unknown) => ipcRenderer.invoke('mastodon:post', params),
-    verify: (params: unknown) => ipcRenderer.invoke('mastodon:verify', params),
+    verify: () => ipcRenderer.invoke('mastodon:verify'),
     startOAuth: (serverUrl: string) => ipcRenderer.invoke('mastodon:startOAuth', { serverUrl }),
     onOAuthCallback: (callback: (data: unknown) => void) => {
       const handler = (_: IpcRendererEvent, data: unknown) => callback(data)
