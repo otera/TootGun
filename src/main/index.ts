@@ -119,7 +119,7 @@ function createWindow(): void {
     backgroundColor: '#0d0d0d',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true
     }
   })
