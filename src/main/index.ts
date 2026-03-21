@@ -223,7 +223,8 @@ app.whenReady().then(() => {
         body: JSON.stringify({
           client_name: 'TootGun',
           redirect_uris: 'tootgun://oauth',
-          scopes: 'read:accounts write:statuses'
+          scopes: 'read:accounts write:statuses',
+          website: 'https://github.com/otera/TootGun'
         })
       })
       if (!res.ok) throw new Error(`アプリ登録失敗: HTTP ${res.status}`)
