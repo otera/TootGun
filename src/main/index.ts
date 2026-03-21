@@ -30,6 +30,9 @@ interface OAuthPending {
   clientSecret: string
   codeVerifier: string
 }
+
+type OAuthApp = { clientId: string; clientSecret: string }
+
 let pendingOAuth: OAuthPending | null = null
 
 async function handleOAuthDeepLink(url: string): Promise<void> {
@@ -202,8 +205,16 @@ app.whenReady().then(() => {
 
   // OAuth: register app and open browser
   ipcMain.handle('mastodon:startOAuth', async (_, { serverUrl }: { serverUrl: string }) => {
-    type OAuthApp = { clientId: string; clientSecret: string }
-    let credentials = store.get(`oauth_app_${serverUrl}`) as OAuthApp | undefined
+    let credentials: OAuthApp | undefined
+    const stored = store.get(`oauth_app_${serverUrl}`) as OAuthApp | undefined
+    if (stored) {
+      try {
+        credentials = { clientId: stored.clientId, clientSecret: decryptToken(stored.clientSecret) }
+      } catch {
+        // Decryption failed (old unencrypted data), discard and re-register
+        store.delete(`oauth_app_${serverUrl}`)
+      }
+    }
 
     if (!credentials) {
       const res = await fetch(`${serverUrl}/api/v1/apps`, {
@@ -218,7 +229,10 @@ app.whenReady().then(() => {
       if (!res.ok) throw new Error(`アプリ登録失敗: HTTP ${res.status}`)
       const data = (await res.json()) as { client_id: string; client_secret: string }
       credentials = { clientId: data.client_id, clientSecret: data.client_secret }
-      store.set(`oauth_app_${serverUrl}`, credentials)
+      store.set(`oauth_app_${serverUrl}`, {
+        clientId: credentials.clientId,
+        clientSecret: encryptToken(credentials.clientSecret)
+      })
     }
 
     const codeVerifier = generateCodeVerifier()
