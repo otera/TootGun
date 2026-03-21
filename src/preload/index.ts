@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
 contextBridge.exposeInMainWorld('api', {
   platform: process.platform,
@@ -9,6 +9,12 @@ contextBridge.exposeInMainWorld('api', {
   },
   mastodon: {
     post: (params: unknown) => ipcRenderer.invoke('mastodon:post', params),
-    verify: (params: unknown) => ipcRenderer.invoke('mastodon:verify', params)
+    verify: () => ipcRenderer.invoke('mastodon:verify'),
+    startOAuth: (serverUrl: string) => ipcRenderer.invoke('mastodon:startOAuth', { serverUrl }),
+    onOAuthCallback: (callback: (data: unknown) => void) => {
+      const handler = (_: IpcRendererEvent, data: unknown) => callback(data)
+      ipcRenderer.on('oauth:callback', handler)
+      return () => ipcRenderer.removeListener('oauth:callback', handler)
+    }
   }
 })

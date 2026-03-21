@@ -12,15 +12,8 @@ export interface MastodonAccount {
 export type Visibility = 'public' | 'unlisted' | 'private' | 'direct'
 
 export interface PostParams {
-  serverUrl: string
-  token: string
   status: string
   visibility: Visibility
-}
-
-export interface VerifyParams {
-  serverUrl: string
-  token: string
 }
 
 export interface PostHistory {
@@ -48,6 +41,12 @@ export interface Particle extends Spark {
   py: number
 }
 
+export interface OAuthCallbackData {
+  token?: string
+  account?: MastodonAccount
+  error?: string
+}
+
 // window.api bridge type
 export interface ElectronAPI {
   platform: string
@@ -58,7 +57,9 @@ export interface ElectronAPI {
   }
   mastodon: {
     post: (params: PostParams) => Promise<unknown>
-    verify: (params: VerifyParams) => Promise<MastodonAccount>
+    verify: () => Promise<MastodonAccount>
+    startOAuth: (serverUrl: string) => Promise<void>
+    onOAuthCallback: (callback: (data: OAuthCallbackData) => void) => () => void
   }
 }
 

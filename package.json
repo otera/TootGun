@@ -45,6 +45,12 @@
     "appId": "com.tootgun.app",
     "productName": "TootGun",
     "icon": "resources/icon",
+    "protocols": [
+      {
+        "name": "TootGun OAuth",
+        "schemes": ["tootgun"]
+      }
+    ],
     "mac": {
       "category": "public.app-category.social-networking",
       "target": [

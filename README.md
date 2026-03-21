@@ -2,7 +2,8 @@
 
 **1秒に3発、想いをブチ込め。**
 
-Mastodon向け高速投稿デスクトップクライアント。キーボード一発で投稿できる、シンプルでスピーディーな銃口型UIが特徴。
+Mastodon向け高速投稿デスクトップクライアント。  
+キーボード一発で投稿できる、シンプルでスピーディーな銃口型UIが特徴。
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
 ![Electron](https://img.shields.io/badge/Electron-29-blue)
@@ -26,21 +27,11 @@ Mastodon向け高速投稿デスクトップクライアント。キーボード
 
 ## セットアップ
 
-### 1. アクセストークンの取得
-
-1. MastodonインスタンスのWeb UIにログイン
-2. **設定 → 開発 → 新規アプリ** を開く
-3. アプリ名を入力し、以下のスコープにチェック：
-   - `read:accounts`
-   - `write:statuses`
-4. 作成後に表示される **アクセストークン** をコピー
-
-### 2. アプリへの接続
-
 1. TootGunを起動
 2. サーバーURL（例: `https://mastodon.social`）を入力
-3. コピーしたアクセストークンを貼り付け
-4. **接続する** をクリック
+3. **接続する** をクリック
+4. ブラウザが開くので、MastodonアカウントでTootGunへのアクセスを許可
+5. 自動的にアプリへ戻り、接続完了
 
 ## 開発
 
@@ -64,21 +55,21 @@ npm run dist:win   # Windows (.exe)
 - **Electron 29** — クロスプラットフォームデスクトップ
 - **electron-vite 2** — 高速ビルド＆HMR
 - **React 18** — UI
-- **electron-store** — 設定永続化（サーバーURL、トークン、ハッシュタグ、履歴）
+- **electron-store** — 設定永続化（サーバーURL、OAuthトークン、ハッシュタグ、履歴）
 
 ## プロジェクト構成
 
 ```
 src/
-├── main/index.js          # メインプロセス（IPC、Mastodon API呼び出し）
-├── preload/index.js       # コンテキストブリッジ
+├── main/index.ts          # メインプロセス（IPC、Mastodon API呼び出し）
+├── preload/index.ts       # コンテキストブリッジ
 └── renderer/src/
-    ├── App.jsx            # 画面ルーティング
+    ├── App.tsx            # 画面ルーティング
     └── components/
-        ├── Settings.jsx   # 接続設定
-        ├── Composer.jsx   # 投稿画面
-        ├── HashtagPanel.jsx
-        └── SparkEffect.jsx
+        ├── Settings.tsx   # 接続設定
+        ├── Composer.tsx   # 投稿画面
+        ├── HashtagPanel.tsx
+        └── SparkEffect.tsx
 ```
 
 ## ライセンス

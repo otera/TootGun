@@ -1,38 +1,38 @@
-import { useState } from 'react'
-import type { MastodonAccount } from '../types'
+import { useState, useEffect } from 'react'
+import type { MastodonAccount, OAuthCallbackData } from '../types'
 
 interface SettingsProps {
   onSaved: (account: MastodonAccount) => void
 }
 
-interface StatusMsg {
-  type: 'success' | 'error'
-  text: string
-}
+type AuthState = 'input' | 'waiting' | 'error'
 
 export default function Settings({ onSaved }: SettingsProps) {
   const [serverUrl, setServerUrl] = useState('https://mastodon.social')
-  const [token, setToken] = useState('')
-  const [status, setStatus] = useState<StatusMsg | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [authState, setAuthState] = useState<AuthState>('input')
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const handleConnect = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const cleanup = window.api.mastodon.onOAuthCallback((data: OAuthCallbackData) => {
+      if (data.error) {
+        setErrorMsg(data.error)
+        setAuthState('error')
+      } else if (data.account) {
+        onSaved(data.account)
+      }
+    })
+    return cleanup
+  }, [onSaved])
+
+  const handleAuth = async (e: { preventDefault(): void }) => {
     e.preventDefault()
-    setLoading(true)
-    setStatus(null)
-
     const cleanUrl = serverUrl.replace(/\/$/, '')
-
+    setAuthState('waiting')
     try {
-      const account = await window.api.mastodon.verify({ serverUrl: cleanUrl, token })
-      await window.api.store.set('serverUrl', cleanUrl)
-      await window.api.store.set('token', token)
-      setStatus({ type: 'success', text: `接続成功: @${account.acct}` })
-      setTimeout(() => onSaved(account), 800)
+      await window.api.mastodon.startOAuth(cleanUrl)
     } catch (err) {
-      setStatus({ type: 'error', text: `接続失敗: ${(err as Error).message}` })
-    } finally {
-      setLoading(false)
+      setErrorMsg((err as Error).message)
+      setAuthState('error')
     }
   }
 
@@ -45,41 +45,45 @@ export default function Settings({ onSaved }: SettingsProps) {
         <p className="logo-tagline">1秒に3発、想いをブチ込め。</p>
       </div>
 
-      <form className="settings-form" onSubmit={handleConnect}>
-        <div className="form-group">
-          <label>Mastodonサーバー</label>
-          <input
-            type="url"
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
-            placeholder="https://mastodon.social"
-            required
-          />
-          <span className="form-hint">あなたのインスタンスのURLを入力</span>
+      {authState === 'input' && (
+        <form className="settings-form" onSubmit={handleAuth}>
+          <div className="form-group">
+            <label>Mastodonサーバー</label>
+            <input
+              type="url"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+              placeholder="https://mastodon.social"
+              required
+            />
+            <span className="form-hint">あなたのインスタンスのURLを入力</span>
+          </div>
+
+          <button type="submit" className="connect-btn">
+            Mastodonで認証
+          </button>
+        </form>
+      )}
+
+      {authState === 'waiting' && (
+        <div className="oauth-waiting">
+          <div className="oauth-spinner" />
+          <p className="oauth-waiting-text">ブラウザで認証中...</p>
+          <p className="form-hint">ブラウザでTootGunへのアクセスを許可してください</p>
+          <button className="cancel-btn" onClick={() => setAuthState('input')}>
+            キャンセル
+          </button>
         </div>
+      )}
 
-        <div className="form-group">
-          <label>アクセストークン</label>
-          <input
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="トークンを貼り付け"
-            required
-          />
-          <span className="form-hint">
-            設定 → 開発 → 新規アプリ作成時に
-            <br />
-            <code>read:accounts</code> と <code>write:statuses</code> を付与してコピー
-          </span>
+      {authState === 'error' && (
+        <div className="settings-form">
+          <div className="status-msg error">{errorMsg}</div>
+          <button className="connect-btn" onClick={() => setAuthState('input')}>
+            やり直す
+          </button>
         </div>
-
-        {status && <div className={`status-msg ${status.type}`}>{status.text}</div>}
-
-        <button type="submit" className="connect-btn" disabled={loading}>
-          {loading ? '接続中...' : '接続する'}
-        </button>
-      </form>
+      )}
     </div>
   )
 }

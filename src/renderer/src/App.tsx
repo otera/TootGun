@@ -12,17 +12,11 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      const serverUrl = (await window.api.store.get('serverUrl')) as string | undefined
-      const token = (await window.api.store.get('token')) as string | undefined
-      if (serverUrl && token) {
-        try {
-          const acct = await window.api.mastodon.verify({ serverUrl, token })
-          setAccount(acct)
-          setScreen('composer')
-        } catch {
-          setScreen('settings')
-        }
-      } else {
+      try {
+        const acct = await window.api.mastodon.verify()
+        setAccount(acct)
+        setScreen('composer')
+      } catch {
         setScreen('settings')
       }
     }
@@ -34,9 +28,9 @@ export default function App() {
     setScreen('composer')
   }
 
-  const handleLogout = () => {
-    window.api.store.delete('serverUrl')
-    window.api.store.delete('token')
+  const handleLogout = async () => {
+    await window.api.store.delete('serverUrl')
+    await window.api.store.delete('token')
     setAccount(null)
     setScreen('settings')
   }
