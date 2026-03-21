@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, nativeTheme, safeStorage } from 'electron'
 import { join } from 'path'
+import { createHash, randomBytes } from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import Store from 'electron-store'
 
@@ -15,10 +16,19 @@ function decryptToken(encrypted: string): string {
 
 let mainWindow: BrowserWindow | null = null
 
+function generateCodeVerifier(): string {
+  return randomBytes(32).toString('base64url')
+}
+
+function generateCodeChallenge(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url')
+}
+
 interface OAuthPending {
   serverUrl: string
   clientId: string
   clientSecret: string
+  codeVerifier: string
 }
 let pendingOAuth: OAuthPending | null = null
 
@@ -38,7 +48,7 @@ async function handleOAuthDeepLink(url: string): Promise<void> {
       return
     }
 
-    const { serverUrl, clientId, clientSecret } = pendingOAuth
+    const { serverUrl, clientId, clientSecret, codeVerifier } = pendingOAuth
     pendingOAuth = null
 
     const tokenRes = await fetch(`${serverUrl}/oauth/token`, {
@@ -49,7 +59,8 @@ async function handleOAuthDeepLink(url: string): Promise<void> {
         code,
         client_id: clientId,
         client_secret: clientSecret,
-        redirect_uri: 'tootgun://oauth'
+        redirect_uri: 'tootgun://oauth',
+        code_verifier: codeVerifier
       })
     })
     if (!tokenRes.ok) throw new Error(`トークン取得失敗: HTTP ${tokenRes.status}`)
@@ -210,13 +221,17 @@ app.whenReady().then(() => {
       store.set(`oauth_app_${serverUrl}`, credentials)
     }
 
-    pendingOAuth = { serverUrl, ...credentials }
+    const codeVerifier = generateCodeVerifier()
+    const codeChallenge = generateCodeChallenge(codeVerifier)
+    pendingOAuth = { serverUrl, ...credentials, codeVerifier }
 
     const authUrl = new URL(`${serverUrl}/oauth/authorize`)
     authUrl.searchParams.set('client_id', credentials.clientId)
     authUrl.searchParams.set('redirect_uri', 'tootgun://oauth')
     authUrl.searchParams.set('response_type', 'code')
     authUrl.searchParams.set('scope', 'read:accounts write:statuses')
+    authUrl.searchParams.set('code_challenge', codeChallenge)
+    authUrl.searchParams.set('code_challenge_method', 'S256')
 
     shell.openExternal(authUrl.toString())
   })
