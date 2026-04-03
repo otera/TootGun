@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('api', {
     set: (key: string, value: unknown) => ipcRenderer.invoke('store:set', key, value),
     delete: (key: string) => ipcRenderer.invoke('store:delete', key)
   },
+  window: {
+    setAlwaysOnTop: (flag: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', flag)
+  },
   mastodon: {
     post: (params: unknown) => ipcRenderer.invoke('mastodon:post', params),
     verify: () => ipcRenderer.invoke('mastodon:verify'),

@@ -21,6 +21,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [lastPosts, setLastPosts] = useState<PostHistory[]>([])
   const [error, setError] = useState<string | null>(null)
   const [visibility, setVisibility] = useState<Visibility>('public')
+  const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -31,10 +32,15 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       const savedActive = (await window.api.store.get('activeHashtags')) as string[] | undefined
       const savedPosts = (await window.api.store.get('lastPosts')) as PostHistory[] | undefined
       const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
+      const savedAlwaysOnTop = (await window.api.store.get('alwaysOnTop')) as boolean | undefined
       if (savedHashtags) setHashtags(savedHashtags)
       if (savedActive) setActiveHashtags(savedActive)
       if (savedPosts) setLastPosts(savedPosts)
       if (savedVisibility) setVisibility(savedVisibility)
+      if (savedAlwaysOnTop) {
+        setAlwaysOnTop(true)
+        await window.api.window.setAlwaysOnTop(true)
+      }
     }
     load()
     textareaRef.current?.focus()
@@ -118,10 +124,17 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     await window.api.store.set('activeHashtags', active)
   }
 
+  const handleToggleAlwaysOnTop = async () => {
+    const next = !alwaysOnTop
+    setAlwaysOnTop(next)
+    await window.api.window.setAlwaysOnTop(next)
+    await window.api.store.set('alwaysOnTop', next)
+  }
+
   const remainingClass = remaining < 0 ? 'danger' : remaining < 30 ? 'warning' : ''
 
   return (
-    <div className={`composer-screen ${shaking ? 'shake' : ''}`}>
+    <div className={`composer-screen ${shaking ? 'shake' : ''} ${alwaysOnTop ? 'always-on-top' : ''}`}>
       {flash && <div className="muzzle-flash" />}
       <SparkEffect sparks={sparks} />
 
@@ -131,6 +144,13 @@ export default function Composer({ account, onLogout }: ComposerProps) {
           <span className="logo-text-small">TootGun</span>
         </div>
         <div className="account-info">
+          <button
+            className={`pin-btn ${alwaysOnTop ? 'active' : ''}`}
+            onClick={handleToggleAlwaysOnTop}
+            title={alwaysOnTop ? '最前面固定: ON' : '最前面固定: OFF'}
+          >
+            📌
+          </button>
           <img
             src={account.avatar}
             alt={account.display_name}

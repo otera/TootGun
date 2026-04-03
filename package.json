@@ -48,7 +48,9 @@
     "protocols": [
       {
         "name": "TootGun OAuth",
-        "schemes": ["tootgun"]
+        "schemes": [
+          "tootgun"
+        ]
       }
     ],
     "mac": {
@@ -68,5 +70,8 @@
       "out/**/*",
       "resources/**/*"
     ]
+  },
+  "volta": {
+    "node": "20.20.2"
   }
 }

@@ -55,6 +55,9 @@ export interface ElectronAPI {
     set: (key: string, value: unknown) => Promise<void>
     delete: (key: string) => Promise<void>
   }
+  window: {
+    setAlwaysOnTop: (flag: boolean) => Promise<void>
+  }
   mastodon: {
     post: (params: PostParams) => Promise<unknown>
     verify: () => Promise<MastodonAccount>

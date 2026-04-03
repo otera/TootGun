@@ -159,6 +159,11 @@ app.whenReady().then(() => {
   ipcMain.handle('store:set', (_, key: string, value: unknown) => store.set(key, value))
   ipcMain.handle('store:delete', (_, key: string) => store.delete(key))
 
+  // Window: always on top
+  ipcMain.handle('window:setAlwaysOnTop', (_, flag: boolean) => {
+    mainWindow?.setAlwaysOnTop(flag)
+  })
+
   // Post to Mastodon
   ipcMain.handle(
     'mastodon:post',
