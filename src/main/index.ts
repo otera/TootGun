@@ -208,7 +208,7 @@ app.whenReady().then(() => {
     }
   })
 
-  // OAuth: register app and open browser
+  // OAuth: register app and open auth window
   ipcMain.handle('mastodon:startOAuth', async (_, { serverUrl }: { serverUrl: string }) => {
     let credentials: OAuthApp | undefined
     const stored = store.get(`oauth_app_${serverUrl}`) as OAuthApp | undefined
@@ -253,7 +253,37 @@ app.whenReady().then(() => {
     authUrl.searchParams.set('code_challenge', codeChallenge)
     authUrl.searchParams.set('code_challenge_method', 'S256')
 
-    shell.openExternal(authUrl.toString())
+    const authWindow = new BrowserWindow({
+      width: 800,
+      height: 700,
+      show: true,
+      autoHideMenuBar: true,
+      title: 'TootGun - 認証',
+      webPreferences: {}
+    })
+
+    const handleRedirect = (url: string): void => {
+      if (url.startsWith('tootgun://oauth')) {
+        authWindow.destroy()
+        handleOAuthDeepLink(url)
+      }
+    }
+
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      if (url.startsWith('tootgun://oauth')) {
+        event.preventDefault()
+        handleRedirect(url)
+      }
+    })
+
+    authWindow.webContents.on('will-redirect', (event, url) => {
+      if (url.startsWith('tootgun://oauth')) {
+        event.preventDefault()
+        handleRedirect(url)
+      }
+    })
+
+    authWindow.loadURL(authUrl.toString())
   })
 
   nativeTheme.themeSource = 'dark'
