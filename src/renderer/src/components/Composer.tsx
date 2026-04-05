@@ -22,6 +22,9 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [error, setError] = useState<string | null>(null)
   const [visibility, setVisibility] = useState<Visibility>('public')
   const [alwaysOnTop, setAlwaysOnTop] = useState(false)
+  const [cwEnabled, setCwEnabled] = useState(false)
+  const [cwText, setCwText] = useState('')
+  const cwInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
@@ -51,7 +54,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     ? text + (activeHashtags.length ? '\n\n' + activeHashtags.map((t) => `#${t}`).join(' ') : '')
     : ''
 
-  const charCount = fullText.length
+  const charCount = fullText.length + (cwEnabled ? cwText.length : 0)
   const remaining = MAX_CHARS - charCount
   const canPost = text.trim().length > 0 && remaining >= 0 && !posting
 
@@ -92,7 +95,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     setError(null)
 
     try {
-      await window.api.mastodon.post({ status: fullText, visibility })
+      await window.api.mastodon.post({
+        status: fullText,
+        visibility,
+        spoiler_text: cwEnabled ? cwText.trim() || undefined : undefined
+      })
       fireEffect()
 
       // Save to history
@@ -101,8 +108,9 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       setLastPosts(updatedPosts)
       await window.api.store.set('lastPosts', updatedPosts)
 
-      // Clear text, keep hashtags
+      // Clear text, keep hashtags and CW toggle state
       setText('')
+      setCwText('')
       textareaRef.current?.focus()
     } catch (err) {
       setError((err as Error).message)
@@ -168,6 +176,18 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
       {/* Textarea */}
       <div className="compose-area">
+        {cwEnabled && (
+          <input
+            ref={cwInputRef}
+            type="text"
+            className="cw-input"
+            value={cwText}
+            onChange={(e) => setCwText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="注意書き（CW）"
+            maxLength={500}
+          />
+        )}
         <textarea
           ref={textareaRef}
           value={text}
@@ -195,7 +215,25 @@ export default function Composer({ account, onLogout }: ComposerProps) {
             <option value="direct">✉️ ダイレクト</option>
           </select>
 
-          <span className={`char-count ${remainingClass}`}>{remaining}</span>
+          <div className="options-right">
+            <button
+              className={`cw-toggle-btn ${cwEnabled ? 'active' : ''}`}
+              onClick={() => {
+                const next = !cwEnabled
+                setCwEnabled(next)
+                if (next) {
+                  setTimeout(() => cwInputRef.current?.focus(), 50)
+                } else {
+                  setCwText('')
+                  textareaRef.current?.focus()
+                }
+              }}
+              title={cwEnabled ? 'CW解除' : '注意書き（Content Warning）を追加'}
+            >
+              CW
+            </button>
+            <span className={`char-count ${remainingClass}`}>{remaining}</span>
+          </div>
         </div>
 
         {/* Hashtag panel */}

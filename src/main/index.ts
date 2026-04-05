@@ -167,7 +167,14 @@ app.whenReady().then(() => {
   // Post to Mastodon
   ipcMain.handle(
     'mastodon:post',
-    async (_, { status, visibility }: { status: string; visibility: string }) => {
+    async (
+      _,
+      {
+        status,
+        visibility,
+        spoiler_text
+      }: { status: string; visibility: string; spoiler_text?: string }
+    ) => {
       const serverUrl = store.get('serverUrl') as string
       const encrypted = store.get('token') as string
       const token = decryptToken(encrypted)
@@ -178,7 +185,11 @@ app.whenReady().then(() => {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ status, visibility: visibility || 'public' })
+          body: JSON.stringify({
+            status,
+            visibility: visibility || 'public',
+            spoiler_text: spoiler_text || undefined
+          })
         })
         if (!response.ok) {
           const err = (await response.json().catch(() => ({}))) as { error?: string }

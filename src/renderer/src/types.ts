@@ -14,6 +14,7 @@ export type Visibility = 'public' | 'unlisted' | 'private' | 'direct'
 export interface PostParams {
   status: string
   visibility: Visibility
+  spoiler_text?: string
 }
 
 export interface PostHistory {

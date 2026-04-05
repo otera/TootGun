@@ -424,6 +424,60 @@ body,
   justify-content: space-between;
 }
 
+.options-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* CW */
+.cw-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 7px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+
+.cw-toggle-btn:hover {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.cw-toggle-btn.active {
+  background: rgba(255, 170, 0, 0.15);
+  border-color: var(--warning);
+  color: var(--warning);
+  box-shadow: 0 0 6px rgba(255, 170, 0, 0.3);
+}
+
+.cw-input {
+  width: 100%;
+  background: rgba(255, 170, 0, 0.08);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: box-shadow 0.2s;
+  box-shadow: 0 0 0 2px rgba(255, 170, 0, 0.15);
+}
+
+.cw-input:focus {
+  box-shadow: 0 0 0 3px rgba(255, 170, 0, 0.3);
+}
+
+.cw-input::placeholder {
+  color: rgba(255, 170, 0, 0.4);
+}
+
 .visibility-select {
   background: var(--bg3);
   border: 1px solid var(--border);
