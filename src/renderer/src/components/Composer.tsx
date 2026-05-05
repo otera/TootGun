@@ -4,6 +4,9 @@ import SparkEffect from './SparkEffect'
 import type { MastodonAccount, Visibility, Spark, PostHistory } from '../types'
 
 const MAX_CHARS = 500
+const MAIN_WIDTH = 400
+const HISTORY_WIDTH = 280
+const WINDOW_HEIGHT = 600
 
 interface ComposerProps {
   account: MastodonAccount
@@ -24,11 +27,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const [cwEnabled, setCwEnabled] = useState(false)
   const [cwText, setCwText] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
   const cwInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  // Load hashtags and recent posts from store
   useEffect(() => {
     async function load() {
       const savedHashtags = (await window.api.store.get('hashtags')) as string[] | undefined
@@ -36,6 +39,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       const savedPosts = (await window.api.store.get('lastPosts')) as PostHistory[] | undefined
       const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
       const savedAlwaysOnTop = (await window.api.store.get('alwaysOnTop')) as boolean | undefined
+      const savedHistoryOpen = (await window.api.store.get('historyOpen')) as boolean | undefined
       if (savedHashtags) setHashtags(savedHashtags)
       if (savedActive) setActiveHashtags(savedActive)
       if (savedPosts) setLastPosts(savedPosts)
@@ -44,12 +48,15 @@ export default function Composer({ account, onLogout }: ComposerProps) {
         setAlwaysOnTop(true)
         await window.api.window.setAlwaysOnTop(true)
       }
+      if (savedHistoryOpen) {
+        setHistoryOpen(true)
+        await window.api.window.setSize(MAIN_WIDTH + HISTORY_WIDTH, WINDOW_HEIGHT)
+      }
     }
     load()
     textareaRef.current?.focus()
   }, [])
 
-  // Compose full status text with active hashtags
   const fullText = text
     ? text + (activeHashtags.length ? '\n\n' + activeHashtags.map((t) => `#${t}`).join(' ') : '')
     : ''
@@ -59,15 +66,12 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const canPost = text.trim().length > 0 && remaining >= 0 && !posting
 
   const fireEffect = useCallback(() => {
-    // Screen shake
     setShaking(true)
     setTimeout(() => setShaking(false), 300)
 
-    // Muzzle flash
     setFlash(true)
     setTimeout(() => setFlash(false), 120)
 
-    // Spark particles from button
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       const originX = rect.left + rect.width / 2
@@ -102,13 +106,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       })
       fireEffect()
 
-      // Save to history
       const newPost: PostHistory = { text: fullText, time: new Date().toISOString() }
       const updatedPosts = [newPost, ...lastPosts].slice(0, 10)
       setLastPosts(updatedPosts)
       await window.api.store.set('lastPosts', updatedPosts)
 
-      // Clear text, keep hashtags and CW toggle state
       setText('')
       setCwText('')
       textareaRef.current?.focus()
@@ -139,6 +141,19 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     await window.api.store.set('alwaysOnTop', next)
   }
 
+  const handleToggleHistory = async () => {
+    await window.api.store.set('historyOpen', !historyOpen)
+    if (!historyOpen) {
+      // 開く: ウィンドウを先に広げてからパネルを表示
+      await window.api.window.setSize(MAIN_WIDTH + HISTORY_WIDTH, WINDOW_HEIGHT)
+      setHistoryOpen(true)
+    } else {
+      // 閉じる: パネルを先に非表示にしてからウィンドウを縮める
+      setHistoryOpen(false)
+      await window.api.window.setSize(MAIN_WIDTH, WINDOW_HEIGHT)
+    }
+  }
+
   const remainingClass = remaining < 0 ? 'danger' : remaining < 30 ? 'warning' : ''
 
   return (
@@ -146,136 +161,157 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       {flash && <div className="muzzle-flash" />}
       <SparkEffect sparks={sparks} />
 
-      {/* Header */}
-      <div className="composer-header">
-        <div className="logo-small">
-          <span className="logo-text-small">TootGun</span>
-        </div>
-        <div className="account-info">
-          <button
-            className={`pin-btn ${alwaysOnTop ? 'active' : ''}`}
-            onClick={handleToggleAlwaysOnTop}
-            title={alwaysOnTop ? '最前面固定: ON' : '最前面固定: OFF'}
-          >
-            📌
-          </button>
-          <img
-            src={account.avatar}
-            alt={account.display_name}
-            className="avatar"
-            title={`@${account.acct}`}
-            onError={(e) => {
-              ;(e.target as HTMLImageElement).style.display = 'none'
-            }}
-          />
-          <button className="logout-btn" onClick={onLogout} title="ログアウト">
-            ⏏ ログアウト
-          </button>
-        </div>
-      </div>
-
-      {/* Textarea */}
-      <div className="compose-area">
-        {cwEnabled && (
-          <input
-            ref={cwInputRef}
-            type="text"
-            className="cw-input"
-            value={cwText}
-            onChange={(e) => setCwText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="注意書き（CW）"
-            maxLength={500}
-          />
-        )}
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="今すぐブチ込め！"
-          className="toot-input"
-          rows={5}
-        />
-
-        {/* Visibility */}
-        <div className="options-row">
-          <select
-            className="visibility-select"
-            value={visibility}
-            onChange={async (e) => {
-              const v = e.target.value as Visibility
-              setVisibility(v)
-              await window.api.store.set('visibility', v)
-            }}
-          >
-            <option value="public">🌍 公開</option>
-            <option value="unlisted">🔓 未収載</option>
-            <option value="private">🔒 フォロワーのみ</option>
-            <option value="direct">✉️ ダイレクト</option>
-          </select>
-
-          <div className="options-right">
+      {/* Main area */}
+      <div className="main-area">
+        {/* Header */}
+        <div className="composer-header">
+          <div className="logo-small">
+            <span className="logo-text-small">TootGun</span>
+          </div>
+          <div className="account-info">
             <button
-              className={`cw-toggle-btn ${cwEnabled ? 'active' : ''}`}
-              onClick={() => {
-                const next = !cwEnabled
-                setCwEnabled(next)
-                if (next) {
-                  setTimeout(() => cwInputRef.current?.focus(), 50)
-                } else {
-                  setCwText('')
-                  textareaRef.current?.focus()
-                }
-              }}
-              title={cwEnabled ? 'CW解除' : '注意書き（Content Warning）を追加'}
+              className={`hist-btn ${historyOpen ? 'active' : ''}`}
+              onClick={handleToggleHistory}
+              title={historyOpen ? 'ログを閉じる' : '投稿ログを開く'}
             >
-              CW
+              LOG
             </button>
-            <span className={`char-count ${remainingClass}`}>{remaining}</span>
+            <button
+              className={`pin-btn ${alwaysOnTop ? 'active' : ''}`}
+              onClick={handleToggleAlwaysOnTop}
+              title={alwaysOnTop ? '最前面固定: ON' : '最前面固定: OFF'}
+            >
+              📌
+            </button>
+            <img
+              src={account.avatar}
+              alt={account.display_name}
+              className="avatar"
+              title={`@${account.acct}`}
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+            <button className="logout-btn" onClick={onLogout} title="ログアウト">
+              ⏏ ログアウト
+            </button>
           </div>
         </div>
 
-        {/* Hashtag panel */}
-        <HashtagPanel
-          hashtags={hashtags}
-          activeHashtags={activeHashtags}
-          onChange={handleHashtagsChange}
-        />
+        {/* Textarea */}
+        <div className="compose-area">
+          {cwEnabled && (
+            <input
+              ref={cwInputRef}
+              type="text"
+              className="cw-input"
+              value={cwText}
+              onChange={(e) => setCwText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="注意書き（CW）"
+              maxLength={500}
+            />
+          )}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="今すぐブチ込め！"
+            className="toot-input"
+            rows={5}
+          />
 
-        {error && <div className="error-msg">{error}</div>}
+          {/* Visibility */}
+          <div className="options-row">
+            <select
+              className="visibility-select"
+              value={visibility}
+              onChange={async (e) => {
+                const v = e.target.value as Visibility
+                setVisibility(v)
+                await window.api.store.set('visibility', v)
+              }}
+            >
+              <option value="public">🌍 公開</option>
+              <option value="unlisted">🔓 未収載</option>
+              <option value="private">🔒 フォロワーのみ</option>
+              <option value="direct">✉️ ダイレクト</option>
+            </select>
 
-        {/* Toot button */}
-        <button
-          ref={buttonRef}
-          className={`toot-btn ${posting ? 'firing' : ''} ${!canPost ? 'disabled' : ''}`}
-          onClick={handlePost}
-          disabled={!canPost}
-        >
-          <span className="toot-btn-text">{posting ? 'FIRING...' : 'TOOT!'}</span>
-        </button>
+            <div className="options-right">
+              <button
+                className={`cw-toggle-btn ${cwEnabled ? 'active' : ''}`}
+                onClick={() => {
+                  const next = !cwEnabled
+                  setCwEnabled(next)
+                  if (next) {
+                    setTimeout(() => cwInputRef.current?.focus(), 50)
+                  } else {
+                    setCwText('')
+                    textareaRef.current?.focus()
+                  }
+                }}
+                title={cwEnabled ? 'CW解除' : '注意書き（Content Warning）を追加'}
+              >
+                CW
+              </button>
+              <span className={`char-count ${remainingClass}`}>{remaining}</span>
+            </div>
+          </div>
 
-        <p className="shortcut-hint">⌘Enter で即射</p>
+          {/* Hashtag panel */}
+          <HashtagPanel
+            hashtags={hashtags}
+            activeHashtags={activeHashtags}
+            onChange={handleHashtagsChange}
+          />
+
+          {error && <div className="error-msg">{error}</div>}
+
+          {/* Toot button */}
+          <button
+            ref={buttonRef}
+            className={`toot-btn ${posting ? 'firing' : ''} ${!canPost ? 'disabled' : ''}`}
+            onClick={handlePost}
+            disabled={!canPost}
+          >
+            <span className="toot-btn-text">{posting ? 'FIRING...' : 'TOOT!'}</span>
+          </button>
+
+          <p className="shortcut-hint">⌘Enter で即射</p>
+        </div>
       </div>
 
-      {/* Recent posts */}
-      {lastPosts.length > 0 && (
-        <div className="recent-posts">
-          <div className="recent-title">最近の弾丸</div>
-          {lastPosts.slice(0, 3).map((p, i) => (
-            <div key={i} className="recent-item">
-              <span className="recent-text">
-                {p.text.slice(0, 60)}
-                {p.text.length > 60 ? '…' : ''}
-              </span>
-              <span className="recent-time">
-                {new Date(p.time).toLocaleTimeString('ja-JP', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </span>
-            </div>
-          ))}
+      {/* History panel - MPlayer playlist style */}
+      {historyOpen && (
+        <div className="history-panel">
+          <div className="history-panel-header">
+            <span className="history-panel-title">AMMO LOG</span>
+            <button className="history-close-btn" onClick={handleToggleHistory}>✕</button>
+          </div>
+          <div className="history-list">
+            {lastPosts.length === 0 && (
+              <div className="history-empty">NO AMMO</div>
+            )}
+            {lastPosts.map((p, i) => (
+              <div key={i} className={`history-item ${i === 0 ? 'latest' : ''}`}>
+                <span className="history-num">{String(i + 1).padStart(2, '0')}</span>
+                <div className="history-content">
+                  <span className="history-text">
+                    {p.text.slice(0, 120)}{p.text.length > 120 ? '…' : ''}
+                  </span>
+                  <span className="history-time">
+                    {new Date(p.time).toLocaleTimeString('ja-JP', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit'
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

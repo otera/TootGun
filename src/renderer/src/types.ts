@@ -58,6 +58,7 @@ export interface ElectronAPI {
   }
   window: {
     setAlwaysOnTop: (flag: boolean) => Promise<void>
+    setSize: (width: number, height: number) => Promise<void>
   }
   mastodon: {
     post: (params: PostParams) => Promise<unknown>

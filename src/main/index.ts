@@ -113,9 +113,9 @@ app.setAsDefaultProtocolClient('tootgun')
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 400,
-    height: 600,
+    height: 450,
     minWidth: 360,
-    minHeight: 550,
+    minHeight: 450,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hiddenInset',
@@ -162,6 +162,11 @@ app.whenReady().then(() => {
   // Window: always on top
   ipcMain.handle('window:setAlwaysOnTop', (_, flag: boolean) => {
     mainWindow?.setAlwaysOnTop(flag)
+  })
+
+  // Window: resize
+  ipcMain.handle('window:setSize', (_, { width, height }: { width: number; height: number }) => {
+    mainWindow?.setSize(width, height)
   })
 
   // Post to Mastodon

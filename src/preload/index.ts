@@ -8,7 +8,8 @@ contextBridge.exposeInMainWorld('api', {
     delete: (key: string) => ipcRenderer.invoke('store:delete', key)
   },
   window: {
-    setAlwaysOnTop: (flag: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', flag)
+    setAlwaysOnTop: (flag: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
+    setSize: (width: number, height: number) => ipcRenderer.invoke('window:setSize', { width, height })
   },
   mastodon: {
     post: (params: unknown) => ipcRenderer.invoke('mastodon:post', params),
