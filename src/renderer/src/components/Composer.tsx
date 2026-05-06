@@ -6,7 +6,6 @@ import type { MastodonAccount, Visibility, Spark, PostHistory } from '../types'
 const MAX_CHARS = 500
 const MAIN_WIDTH = 400
 const HISTORY_WIDTH = 280
-const WINDOW_HEIGHT = 600
 
 interface ComposerProps {
   account: MastodonAccount
@@ -50,7 +49,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       }
       if (savedHistoryOpen) {
         setHistoryOpen(true)
-        await window.api.window.setSize(MAIN_WIDTH + HISTORY_WIDTH, WINDOW_HEIGHT)
+        await window.api.window.setWidth(MAIN_WIDTH + HISTORY_WIDTH)
       }
     }
     load()
@@ -144,13 +143,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const handleToggleHistory = async () => {
     await window.api.store.set('historyOpen', !historyOpen)
     if (!historyOpen) {
-      // 開く: ウィンドウを先に広げてからパネルを表示
-      await window.api.window.setSize(MAIN_WIDTH + HISTORY_WIDTH, WINDOW_HEIGHT)
+      await window.api.window.setWidth(MAIN_WIDTH + HISTORY_WIDTH)
       setHistoryOpen(true)
     } else {
-      // 閉じる: パネルを先に非表示にしてからウィンドウを縮める
       setHistoryOpen(false)
-      await window.api.window.setSize(MAIN_WIDTH, WINDOW_HEIGHT)
+      await window.api.window.setWidth(MAIN_WIDTH)
     }
   }
 

@@ -114,7 +114,7 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 400,
     height: 450,
-    minWidth: 360,
+    minWidth: 400,
     minHeight: 450,
     show: false,
     autoHideMenuBar: true,
@@ -167,6 +167,14 @@ app.whenReady().then(() => {
   // Window: resize
   ipcMain.handle('window:setSize', (_, { width, height }: { width: number; height: number }) => {
     mainWindow?.setSize(width, height)
+  })
+
+  // Window: resize width only (height stays unchanged)
+  ipcMain.handle('window:setWidth', (_, width: number) => {
+    if (mainWindow) {
+      const [, currentHeight] = mainWindow.getSize()
+      mainWindow.setSize(width, currentHeight)
+    }
   })
 
   // Post to Mastodon

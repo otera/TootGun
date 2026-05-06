@@ -9,7 +9,8 @@ contextBridge.exposeInMainWorld('api', {
   },
   window: {
     setAlwaysOnTop: (flag: boolean) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
-    setSize: (width: number, height: number) => ipcRenderer.invoke('window:setSize', { width, height })
+    setSize: (width: number, height: number) => ipcRenderer.invoke('window:setSize', { width, height }),
+    setWidth: (width: number) => ipcRenderer.invoke('window:setWidth', width)
   },
   mastodon: {
     post: (params: unknown) => ipcRenderer.invoke('mastodon:post', params),
