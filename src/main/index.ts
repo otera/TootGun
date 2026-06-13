@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, nativeTheme, safeStorage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme, safeStorage, screen } from 'electron'
 import { join } from 'path'
 import { createHash, randomBytes } from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -111,9 +111,12 @@ if (!gotTheLock) {
 app.setAsDefaultProtocolClient('tootgun')
 
 function createWindow(): void {
+  const savedWidth = store.get('windowWidth') as number | undefined
+  const savedHeight = store.get('windowHeight') as number | undefined
+
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 450,
+    width: Math.max(400, savedWidth ?? 400),
+    height: Math.max(450, savedHeight ?? 450),
     minWidth: 400,
     minHeight: 450,
     show: false,
@@ -125,6 +128,18 @@ function createWindow(): void {
       sandbox: true,
       contextIsolation: true
     }
+  })
+
+  let resizeTimer: ReturnType<typeof setTimeout> | null = null
+  mainWindow.on('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer)
+    resizeTimer = setTimeout(() => {
+      if (!mainWindow) return
+      const [w, h] = mainWindow.getSize()
+      store.set('windowWidth', w)
+      store.set('windowHeight', h)
+      resizeTimer = null
+    }, 300)
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -169,11 +184,12 @@ app.whenReady().then(() => {
     mainWindow?.setSize(width, height)
   })
 
-  // Window: resize width only (height stays unchanged)
+  // Window: resize width only (height stays unchanged), clamped to screen width
   ipcMain.handle('window:setWidth', (_, width: number) => {
     if (mainWindow) {
+      const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize
       const [, currentHeight] = mainWindow.getSize()
-      mainWindow.setSize(width, currentHeight)
+      mainWindow.setSize(Math.min(width, screenWidth), currentHeight)
     }
   })
 

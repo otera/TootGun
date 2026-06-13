@@ -261,8 +261,8 @@ body,
 }
 
 .main-area {
-  width: 400px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 400px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -677,14 +677,28 @@ body,
   margin-top: -6px;
 }
 
+/* === Resize Handle === */
+.resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: #1e3050;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.resize-handle:hover,
+.resize-handle.dragging {
+  background: rgba(255, 107, 0, 0.55);
+}
+
 /* === History Panel (MPlayer playlist style) === */
 .history-panel {
-  width: 280px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 180px;
   display: flex;
   flex-direction: column;
   background: #080c14;
-  border-left: 2px solid #1e3050;
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
@@ -744,6 +758,7 @@ body,
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  width: 100%;
 }
 
 .history-list::-webkit-scrollbar {
@@ -795,6 +810,7 @@ body,
   display: flex;
   flex-direction: column;
   gap: 3px;
+  overflow: hidden;
 }
 
 .history-text {
@@ -802,7 +818,10 @@ body,
   color: #5a7a9a;
   line-height: 1.45;
   word-break: break-all;
+  overflow-wrap: break-word;
   white-space: normal;
+  display: block;
+  min-width: 0;
 }
 
 .history-item.latest .history-text {

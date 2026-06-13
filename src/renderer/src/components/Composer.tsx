@@ -4,6 +4,9 @@ import SparkEffect from './SparkEffect'
 import type { MastodonAccount, Visibility, Spark, PostHistory } from '../types'
 
 const MAX_CHARS = 500
+const MIN_HISTORY_WIDTH = 180
+const MAX_HISTORY_WIDTH = 600
+const DEFAULT_HISTORY_WIDTH = 280
 
 /**
  * 日付を「5分前」「2時間前」「3日前」のように相対的な表現に変換。
@@ -40,7 +43,7 @@ function formatTime(isoString: string): string {
   return rtf.format(-Math.floor(diffDay / 30), 'month')
 }
 const MAIN_WIDTH = 400
-const HISTORY_WIDTH = 280
+const HANDLE_WIDTH = 5
 
 interface ComposerProps {
   account: MastodonAccount
@@ -62,6 +65,9 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [cwEnabled, setCwEnabled] = useState(false)
   const [cwText, setCwText] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyWidth, setHistoryWidth] = useState(DEFAULT_HISTORY_WIDTH)
+  const [isResizing, setIsResizing] = useState(false)
+  const historyWidthRef = useRef(DEFAULT_HISTORY_WIDTH)
   const cwInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -74,6 +80,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
       const savedAlwaysOnTop = (await window.api.store.get('alwaysOnTop')) as boolean | undefined
       const savedHistoryOpen = (await window.api.store.get('historyOpen')) as boolean | undefined
+      const savedHistoryWidth = (await window.api.store.get('historyWidth')) as number | undefined
       if (savedHashtags) setHashtags(savedHashtags)
       if (savedActive) setActiveHashtags(savedActive)
       if (savedPosts) setLastPosts(savedPosts)
@@ -82,9 +89,12 @@ export default function Composer({ account, onLogout }: ComposerProps) {
         setAlwaysOnTop(true)
         await window.api.window.setAlwaysOnTop(true)
       }
+      const restoredWidth = savedHistoryWidth ?? DEFAULT_HISTORY_WIDTH
+      setHistoryWidth(restoredWidth)
+      historyWidthRef.current = restoredWidth
       if (savedHistoryOpen) {
         setHistoryOpen(true)
-        await window.api.window.setWidth(MAIN_WIDTH + HISTORY_WIDTH)
+        await window.api.window.setWidth(MAIN_WIDTH + HANDLE_WIDTH + restoredWidth)
       }
     }
     load()
@@ -178,13 +188,39 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const handleToggleHistory = async () => {
     await window.api.store.set('historyOpen', !historyOpen)
     if (!historyOpen) {
-      await window.api.window.setWidth(MAIN_WIDTH + HISTORY_WIDTH)
+      await window.api.window.setWidth(MAIN_WIDTH + HANDLE_WIDTH + historyWidthRef.current)
       setHistoryOpen(true)
     } else {
       setHistoryOpen(false)
       await window.api.window.setWidth(MAIN_WIDTH)
     }
   }
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = historyWidthRef.current
+    setIsResizing(true)
+    document.body.style.cursor = 'col-resize'
+
+    const onMove = (e: MouseEvent) => {
+      const diff = startX - e.clientX
+      const newWidth = Math.max(MIN_HISTORY_WIDTH, Math.min(MAX_HISTORY_WIDTH, startWidth + diff))
+      historyWidthRef.current = newWidth
+      setHistoryWidth(newWidth)
+    }
+
+    const onUp = async () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      setIsResizing(false)
+      await window.api.store.set('historyWidth', historyWidthRef.current)
+    }
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
 
   const remainingClass = remaining < 0 ? 'danger' : remaining < 30 ? 'warning' : ''
 
@@ -319,7 +355,12 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
       {/* History panel - MPlayer playlist style */}
       {historyOpen && (
-        <div className="history-panel">
+        <>
+        <div
+          className={`resize-handle ${isResizing ? 'dragging' : ''}`}
+          onMouseDown={handleResizeMouseDown}
+        />
+        <div className="history-panel" style={{ width: historyWidth }}>
           <div className="history-panel-header">
             <span className="history-panel-title">AMMO LOG</span>
             <button className="history-close-btn" onClick={handleToggleHistory}>
@@ -342,6 +383,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
             ))}
           </div>
         </div>
+        </>
       )}
     </div>
   )
