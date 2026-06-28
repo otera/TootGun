@@ -6,7 +6,7 @@ Mastodon向け高速投稿デスクトップクライアント。
 キーボード一発で投稿できる、シンプルでスピーディーな銃口型UIが特徴。
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
-![Electron](https://img.shields.io/badge/Electron-29-blue)
+![Electron](https://img.shields.io/badge/Electron-42-blue)
 ![React](https://img.shields.io/badge/React-18-61dafb)
 
 ## 特徴
@@ -52,9 +52,9 @@ npm run dist:win   # Windows (.exe)
 
 ## 技術スタック
 
-- **Electron 29** — クロスプラットフォームデスクトップ
-- **electron-vite 2** — 高速ビルド＆HMR
-- **React 18** — UI
+- **Electron** — クロスプラットフォームデスクトップ
+- **electron-vite** — 高速ビルド＆HMR
+- **React** — UI
 - **electron-store** — 設定永続化（サーバーURL、OAuthトークン、ハッシュタグ、履歴）
 
 ## プロジェクト構成
