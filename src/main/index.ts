@@ -1,18 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain, nativeTheme, safeStorage, screen } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, nativeTheme, screen } from 'electron'
 import { join } from 'path'
 import { createHash, randomBytes } from 'crypto'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import Store from 'electron-store'
 
 const store = new Store()
-
-function encryptToken(token: string): string {
-  return safeStorage.encryptString(token).toString('base64')
-}
-
-function decryptToken(encrypted: string): string {
-  return safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
-}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -77,7 +69,7 @@ async function handleOAuthDeepLink(url: string): Promise<void> {
     const account = await verifyRes.json()
 
     store.set('serverUrl', serverUrl)
-    store.set('token', encryptToken(token))
+    store.set('token', token)
 
     mainWindow?.webContents.send('oauth:callback', { token, account })
   } catch (e) {
@@ -205,8 +197,7 @@ app.whenReady().then(() => {
       }: { status: string; visibility: string; spoiler_text?: string }
     ) => {
       const serverUrl = store.get('serverUrl') as string
-      const encrypted = store.get('token') as string
-      const token = decryptToken(encrypted)
+      const token = store.get('token') as string
       try {
         const response = await fetch(`${serverUrl}/api/v1/statuses`, {
           method: 'POST',
@@ -234,9 +225,8 @@ app.whenReady().then(() => {
   // Verify Mastodon token
   ipcMain.handle('mastodon:verify', async () => {
     const serverUrl = store.get('serverUrl') as string | undefined
-    const encrypted = store.get('token') as string | undefined
-    if (!serverUrl || !encrypted) throw new Error('未認証')
-    const token = decryptToken(encrypted)
+    const token = store.get('token') as string | undefined
+    if (!serverUrl || !token) throw new Error('未認証')
     try {
       const response = await fetch(`${serverUrl}/api/v1/accounts/verify_credentials`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -250,16 +240,8 @@ app.whenReady().then(() => {
 
   // OAuth: register app and open auth window
   ipcMain.handle('mastodon:startOAuth', async (_, { serverUrl }: { serverUrl: string }) => {
-    let credentials: OAuthApp | undefined
     const stored = store.get(`oauth_app_${serverUrl}`) as OAuthApp | undefined
-    if (stored) {
-      try {
-        credentials = { clientId: stored.clientId, clientSecret: decryptToken(stored.clientSecret) }
-      } catch {
-        // Decryption failed (old unencrypted data), discard and re-register
-        store.delete(`oauth_app_${serverUrl}`)
-      }
-    }
+    let credentials: OAuthApp | undefined = stored
 
     if (!credentials) {
       const res = await fetch(`${serverUrl}/api/v1/apps`, {
@@ -275,10 +257,7 @@ app.whenReady().then(() => {
       if (!res.ok) throw new Error(`アプリ登録失敗: HTTP ${res.status}`)
       const data = (await res.json()) as { client_id: string; client_secret: string }
       credentials = { clientId: data.client_id, clientSecret: data.client_secret }
-      store.set(`oauth_app_${serverUrl}`, {
-        clientId: credentials.clientId,
-        clientSecret: encryptToken(credentials.clientSecret)
-      })
+      store.set(`oauth_app_${serverUrl}`, credentials)
     }
 
     const codeVerifier = generateCodeVerifier()
