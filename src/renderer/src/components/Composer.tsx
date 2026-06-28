@@ -80,7 +80,6 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
       const savedAlwaysOnTop = (await window.api.store.get('alwaysOnTop')) as boolean | undefined
       const savedHistoryOpen = (await window.api.store.get('historyOpen')) as boolean | undefined
-      const savedHistoryWidth = (await window.api.store.get('historyWidth')) as number | undefined
       if (savedHashtags) setHashtags(savedHashtags)
       if (savedActive) setActiveHashtags(savedActive)
       if (savedPosts) setLastPosts(savedPosts)
@@ -89,12 +88,9 @@ export default function Composer({ account, onLogout }: ComposerProps) {
         setAlwaysOnTop(true)
         await window.api.window.setAlwaysOnTop(true)
       }
-      const restoredWidth = savedHistoryWidth ?? DEFAULT_HISTORY_WIDTH
-      setHistoryWidth(restoredWidth)
-      historyWidthRef.current = restoredWidth
       if (savedHistoryOpen) {
         setHistoryOpen(true)
-        await window.api.window.setWidth(MAIN_WIDTH + HANDLE_WIDTH + restoredWidth)
+        await window.api.window.setWidth(MAIN_WIDTH + HANDLE_WIDTH + DEFAULT_HISTORY_WIDTH)
       }
     }
     load()
@@ -210,12 +206,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       setHistoryWidth(newWidth)
     }
 
-    const onUp = async () => {
+    const onUp = () => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
       document.body.style.cursor = ''
       setIsResizing(false)
-      await window.api.store.set('historyWidth', historyWidthRef.current)
     }
 
     document.addEventListener('mousemove', onMove)
@@ -356,33 +351,33 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       {/* History panel - MPlayer playlist style */}
       {historyOpen && (
         <>
-        <div
-          className={`resize-handle ${isResizing ? 'dragging' : ''}`}
-          onMouseDown={handleResizeMouseDown}
-        />
-        <div className="history-panel" style={{ width: historyWidth }}>
-          <div className="history-panel-header">
-            <span className="history-panel-title">AMMO LOG</span>
-            <button className="history-close-btn" onClick={handleToggleHistory}>
-              ✕
-            </button>
-          </div>
-          <div className="history-list">
-            {lastPosts.length === 0 && <div className="history-empty">NO AMMO</div>}
-            {lastPosts.map((p, i) => (
-              <div key={i} className={`history-item ${i === 0 ? 'latest' : ''}`}>
-                <span className="history-num">{String(i + 1).padStart(2, '0')}</span>
-                <div className="history-content">
-                  <span className="history-text">
-                    {p.text.slice(0, 120)}
-                    {p.text.length > 120 ? '…' : ''}
-                  </span>
-                  <span className="history-time">{formatTime(p.time)}</span>
+          <div
+            className={`resize-handle ${isResizing ? 'dragging' : ''}`}
+            onMouseDown={handleResizeMouseDown}
+          />
+          <div className="history-panel" style={{ width: historyWidth }}>
+            <div className="history-panel-header">
+              <span className="history-panel-title">AMMO LOG</span>
+              <button className="history-close-btn" onClick={handleToggleHistory}>
+                ✕
+              </button>
+            </div>
+            <div className="history-list">
+              {lastPosts.length === 0 && <div className="history-empty">NO AMMO</div>}
+              {lastPosts.map((p, i) => (
+                <div key={i} className={`history-item ${i === 0 ? 'latest' : ''}`}>
+                  <span className="history-num">{String(i + 1).padStart(2, '0')}</span>
+                  <div className="history-content">
+                    <span className="history-text">
+                      {p.text.slice(0, 120)}
+                      {p.text.length > 120 ? '…' : ''}
+                    </span>
+                    <span className="history-time">{formatTime(p.time)}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
         </>
       )}
     </div>
