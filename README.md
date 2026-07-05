@@ -7,7 +7,7 @@ Mastodon向け高速投稿デスクトップクライアント。
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
 ![Electron](https://img.shields.io/badge/Electron-42-blue)
-![React](https://img.shields.io/badge/React-18-61dafb)
+![React](https://img.shields.io/badge/React-19-61dafb)
 
 ## 特徴
 
