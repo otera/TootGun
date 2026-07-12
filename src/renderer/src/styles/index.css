@@ -694,6 +694,99 @@ body,
   margin-top: -6px;
 }
 
+/* === Undo bar (投稿直後だけ表示される取り消しバー) === */
+.undo-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: -6px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: undo-slide-in 0.2s ease-out;
+}
+
+@keyframes undo-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.undo-countdown {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transform-origin: left;
+  animation-name: undo-shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes undo-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.undo-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text3);
+  font-family: 'Courier New', Courier, monospace;
+  white-space: nowrap;
+}
+
+.undo-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.undo-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.undo-btn:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 6px rgba(255, 34, 68, 0.3);
+}
+
+.undo-btn.edit:hover:not(:disabled) {
+  border-color: var(--warning);
+  color: var(--warning);
+  box-shadow: 0 0 6px rgba(255, 170, 0, 0.3);
+}
+
+.undo-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* === Resize Handle === */
 .resize-handle {
   width: 5px;

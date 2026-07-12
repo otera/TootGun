@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   mastodon: {
     post: (params: unknown) => ipcRenderer.invoke('mastodon:post', params),
+    delete: (id: string) => ipcRenderer.invoke('mastodon:delete', id),
     verify: () => ipcRenderer.invoke('mastodon:verify'),
     startOAuth: (serverUrl: string) => ipcRenderer.invoke('mastodon:startOAuth', { serverUrl }),
     onOAuthCallback: (callback: (data: unknown) => void) => {

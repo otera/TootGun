@@ -18,6 +18,8 @@ export interface PostParams {
 }
 
 export interface PostHistory {
+  /** MastodonのステータスID。取り消し（削除）に使う。旧履歴には存在しない */
+  id?: string
   text: string
   time: string
 }
@@ -63,6 +65,7 @@ export interface ElectronAPI {
   }
   mastodon: {
     post: (params: PostParams) => Promise<unknown>
+    delete: (id: string) => Promise<unknown>
     verify: () => Promise<MastodonAccount>
     startOAuth: (serverUrl: string) => Promise<void>
     onOAuthCallback: (callback: (data: OAuthCallbackData) => void) => () => void

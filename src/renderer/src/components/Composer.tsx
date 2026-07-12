@@ -4,6 +4,7 @@ import SparkEffect from './SparkEffect'
 import type { MastodonAccount, Visibility, Spark, PostHistory } from '../types'
 
 const MAX_CHARS = 500
+const UNDO_WINDOW_MS = 10000
 const MIN_HISTORY_WIDTH = 180
 const MAX_HISTORY_WIDTH = 600
 const DEFAULT_HISTORY_WIDTH = 280
@@ -50,6 +51,13 @@ interface ComposerProps {
   onLogout: () => void
 }
 
+/** 直前の投稿の取り消し情報。text/cwText はハッシュタグ付与前の原文を保持する */
+interface UndoState {
+  id: string
+  text: string
+  cwText: string
+}
+
 export default function Composer({ account, onLogout }: ComposerProps) {
   const [text, setText] = useState('')
   const [hashtags, setHashtags] = useState<string[]>([])
@@ -64,6 +72,9 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [alwaysOnTop, setAlwaysOnTop] = useState(false)
   const [cwEnabled, setCwEnabled] = useState(false)
   const [cwText, setCwText] = useState('')
+  const [undo, setUndo] = useState<UndoState | null>(null)
+  const [undoBusy, setUndoBusy] = useState(false)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyWidth, setHistoryWidth] = useState(DEFAULT_HISTORY_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
@@ -95,6 +106,9 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     }
     load()
     textareaRef.current?.focus()
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+    }
   }, [])
 
   const fullText = text
@@ -139,17 +153,27 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     setError(null)
 
     try {
-      await window.api.mastodon.post({
+      const posted = (await window.api.mastodon.post({
         status: fullText,
         visibility,
         spoiler_text: cwEnabled ? cwText.trim() || undefined : undefined
-      })
+      })) as { id?: string }
       fireEffect()
 
-      const newPost: PostHistory = { text: fullText, time: new Date().toISOString() }
+      const newPost: PostHistory = {
+        id: posted?.id,
+        text: fullText,
+        time: new Date().toISOString()
+      }
       const updatedPosts = [newPost, ...lastPosts].slice(0, 10)
       setLastPosts(updatedPosts)
       await window.api.store.set('lastPosts', updatedPosts)
+
+      if (posted?.id) {
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+        setUndo({ id: posted.id, text, cwText: cwEnabled ? cwText : '' })
+        undoTimerRef.current = setTimeout(() => setUndo(null), UNDO_WINDOW_MS)
+      }
 
       setText('')
       setCwText('')
@@ -158,6 +182,40 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       setError((err as Error).message)
     } finally {
       setPosting(false)
+    }
+  }
+
+  /**
+   * 直前の投稿を取り消す。サーバーから削除し、ログからも取り除く。
+   * @param redraft trueなら削除後に本文をテキストエリアへ復元して編集し直せるようにする
+   */
+  const handleUndo = async (redraft: boolean) => {
+    if (!undo || undoBusy) return
+    setUndoBusy(true)
+    setError(null)
+
+    try {
+      await window.api.mastodon.delete(undo.id)
+
+      const updatedPosts = lastPosts.filter((p) => p.id !== undo.id)
+      setLastPosts(updatedPosts)
+      await window.api.store.set('lastPosts', updatedPosts)
+
+      if (redraft) {
+        setText(undo.text)
+        if (undo.cwText) {
+          setCwEnabled(true)
+          setCwText(undo.cwText)
+        }
+      }
+
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      setUndo(null)
+      textareaRef.current?.focus()
+    } catch (err) {
+      setError(`取り消し失敗: ${(err as Error).message}`)
+    } finally {
+      setUndoBusy(false)
     }
   }
 
@@ -344,7 +402,35 @@ export default function Composer({ account, onLogout }: ComposerProps) {
             <span className="toot-btn-text">{posting ? 'FIRING...' : 'TOOT!'}</span>
           </button>
 
-          <p className="shortcut-hint">⌘Enter で即射</p>
+          {undo ? (
+            <div className="undo-bar" key={undo.id}>
+              <div
+                className="undo-countdown"
+                style={{ animationDuration: `${UNDO_WINDOW_MS}ms` }}
+              />
+              <span className="undo-label">着弾確認</span>
+              <div className="undo-actions">
+                <button
+                  className="undo-btn"
+                  onClick={() => handleUndo(false)}
+                  disabled={undoBusy}
+                  title="直前のTootを削除"
+                >
+                  🗑 取消
+                </button>
+                <button
+                  className="undo-btn edit"
+                  onClick={() => handleUndo(true)}
+                  disabled={undoBusy}
+                  title="直前のTootを削除して本文を編集し直す"
+                >
+                  ✏️ 取消して編集
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="shortcut-hint">⌘Enter で即射</p>
+          )}
         </div>
       </div>
 

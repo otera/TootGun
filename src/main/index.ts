@@ -222,6 +222,25 @@ app.whenReady().then(() => {
     }
   )
 
+  // Delete a status (送信取り消し)
+  ipcMain.handle('mastodon:delete', async (_, id: string) => {
+    const serverUrl = store.get('serverUrl') as string
+    const token = store.get('token') as string
+    try {
+      const response = await fetch(`${serverUrl}/api/v1/statuses/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { error?: string }
+        throw new Error(err.error || `HTTP ${response.status}`)
+      }
+      return await response.json()
+    } catch (e) {
+      throw new Error((e as Error).message)
+    }
+  })
+
   // Verify Mastodon token
   ipcMain.handle('mastodon:verify', async () => {
     const serverUrl = store.get('serverUrl') as string | undefined
