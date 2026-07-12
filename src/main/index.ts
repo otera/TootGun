@@ -27,6 +27,33 @@ type OAuthApp = { clientId: string; clientSecret: string }
 
 let pendingOAuth: OAuthPending | null = null
 
+/**
+ * キャッシュ済みのアプリ登録がサーバー側でまだ有効か確認する。
+ * Mastodonはトークンが紐づいていないアプリ登録を定期的に自動削除するため、
+ * 古いclient_id/client_secretのまま認証を始めるとトークン交換で401になる。
+ * ネットワークエラー等で判定できない場合は有効とみなす（本番の認証で改めて失敗させる）。
+ */
+async function validateAppCredentials(
+  serverUrl: string,
+  { clientId, clientSecret }: OAuthApp
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${serverUrl}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
+        scope: 'read:accounts'
+      })
+    })
+    return res.ok
+  } catch {
+    return true
+  }
+}
+
 async function handleOAuthDeepLink(url: string): Promise<void> {
   try {
     const parsed = new URL(url)
@@ -58,7 +85,23 @@ async function handleOAuthDeepLink(url: string): Promise<void> {
         code_verifier: codeVerifier
       })
     })
-    if (!tokenRes.ok) throw new Error(`トークン取得失敗: HTTP ${tokenRes.status}`)
+    if (!tokenRes.ok) {
+      const body = (await tokenRes.json().catch(() => ({}))) as {
+        error?: string
+        error_description?: string
+      }
+      // 401 = クライアント認証失敗。キャッシュ済みアプリ登録の失効なので破棄し、次回の再登録で自己修復する
+      if (tokenRes.status === 401) {
+        store.delete(`oauth_app_${serverUrl}`)
+        throw new Error(
+          'アプリ登録が失効していたためリセットしました。もう一度ログインしてください'
+        )
+      }
+      throw new Error(
+        `トークン取得失敗: HTTP ${tokenRes.status}` +
+          (body.error_description || body.error ? ` (${body.error_description || body.error})` : '')
+      )
+    }
     const tokenData = (await tokenRes.json()) as { access_token: string }
     const token = tokenData.access_token
 
@@ -261,6 +304,12 @@ app.whenReady().then(() => {
   ipcMain.handle('mastodon:startOAuth', async (_, { serverUrl }: { serverUrl: string }) => {
     const stored = store.get(`oauth_app_${serverUrl}`) as OAuthApp | undefined
     let credentials: OAuthApp | undefined = stored
+
+    // サーバー側で失効したアプリ登録を掴んだまま認証を始めない（失効していたら捨てて再登録に倒す）
+    if (credentials && !(await validateAppCredentials(serverUrl, credentials))) {
+      store.delete(`oauth_app_${serverUrl}`)
+      credentials = undefined
+    }
 
     if (!credentials) {
       const res = await fetch(`${serverUrl}/api/v1/apps`, {
