@@ -4,6 +4,8 @@ import reactPlugin from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import prettierConfig from 'eslint-config-prettier'
+import oxlint from 'eslint-plugin-oxlint'
+import fs from 'node:fs'
 
 export default tseslint.config(
   // 対象ファイル
@@ -35,6 +37,8 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
     }
   },
-  // Prettier との競合ルールを無効化（最後に置く）
-  prettierConfig
+  // Prettier との競合ルールを無効化
+  prettierConfig,
+  // oxlint と ESLint の競合ルールを無効化
+  ...oxlint.buildFromOxlintConfig(JSON.parse(fs.readFileSync('.oxlintrc.json', 'utf-8')))
 )
