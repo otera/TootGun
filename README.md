@@ -6,7 +6,7 @@ Mastodon向け高速投稿デスクトップクライアント。
 キーボード一発で投稿できる、シンプルでスピーディーな銃口型UIが特徴。
 
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey)
-![Electron](https://img.shields.io/badge/Electron-42-blue)
+![Electron](https://img.shields.io/badge/Electron-43-blue)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 
 ## 特徴
