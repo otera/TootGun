@@ -6,6 +6,9 @@ import Store from 'electron-store'
 
 const store = new Store()
 
+const minWidth = 420
+const minHeight = 450
+
 let mainWindow: BrowserWindow | null = null
 
 function generateCodeVerifier(): string {
@@ -150,10 +153,10 @@ function createWindow(): void {
   const savedHeight = store.get('windowHeight') as number | undefined
 
   mainWindow = new BrowserWindow({
-    width: Math.max(400, savedWidth ?? 400),
-    height: Math.max(450, savedHeight ?? 450),
-    minWidth: 400,
-    minHeight: 450,
+    width: Math.max(minWidth, savedWidth ?? minWidth),
+    height: Math.max(minHeight, savedHeight ?? minHeight),
+    minWidth: minWidth,
+    minHeight: minHeight,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hiddenInset',
