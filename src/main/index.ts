@@ -26,7 +26,9 @@ interface OAuthPending {
   codeVerifier: string
 }
 
-type OAuthApp = { clientId: string; clientSecret: string }
+type OAuthApp = { clientId: string; clientSecret: string; scopes?: string }
+
+const OAUTH_SCOPES = 'read:accounts write:statuses write:media'
 
 let pendingOAuth: OAuthPending | null = null
 
@@ -239,8 +241,14 @@ app.whenReady().then(() => {
       {
         status,
         visibility,
-        spoiler_text
-      }: { status: string; visibility: string; spoiler_text?: string }
+        spoiler_text,
+        media_ids
+      }: {
+        status: string
+        visibility: string
+        spoiler_text?: string
+        media_ids?: string[]
+      }
     ) => {
       const serverUrl = store.get('serverUrl') as string
       const token = store.get('token') as string
@@ -254,8 +262,70 @@ app.whenReady().then(() => {
           body: JSON.stringify({
             status,
             visibility: visibility || 'public',
-            spoiler_text: spoiler_text || undefined
+            spoiler_text: spoiler_text || undefined,
+            media_ids: media_ids && media_ids.length > 0 ? media_ids : undefined
           })
+        })
+        if (!response.ok) {
+          const err = (await response.json().catch(() => ({}))) as { error?: string }
+          throw new Error(err.error || `HTTP ${response.status}`)
+        }
+        return await response.json()
+      } catch (e) {
+        throw new Error((e as Error).message)
+      }
+    }
+  )
+
+  // Upload media (画像などの添付ファイル)。成功すればmedia_idを含むMediaAttachmentを返す
+  ipcMain.handle(
+    'mastodon:uploadMedia',
+    async (
+      _,
+      {
+        data,
+        filename,
+        mimeType,
+        description
+      }: { data: ArrayBuffer; filename: string; mimeType: string; description?: string }
+    ) => {
+      const serverUrl = store.get('serverUrl') as string
+      const token = store.get('token') as string
+      try {
+        const form = new FormData()
+        form.append('file', new Blob([data], { type: mimeType }), filename)
+        if (description) form.append('description', description)
+
+        const response = await fetch(`${serverUrl}/api/v2/media`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: form
+        })
+        if (!response.ok) {
+          const err = (await response.json().catch(() => ({}))) as { error?: string }
+          throw new Error(err.error || `HTTP ${response.status}`)
+        }
+        return await response.json()
+      } catch (e) {
+        throw new Error((e as Error).message)
+      }
+    }
+  )
+
+  // Update media description (Altテキスト)。アップロード後に説明文を変更/付与する
+  ipcMain.handle(
+    'mastodon:updateMedia',
+    async (_, { id, description }: { id: string; description: string }) => {
+      const serverUrl = store.get('serverUrl') as string
+      const token = store.get('token') as string
+      try {
+        const response = await fetch(`${serverUrl}/api/v1/media/${id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ description })
         })
         if (!response.ok) {
           const err = (await response.json().catch(() => ({}))) as { error?: string }
@@ -340,24 +410,34 @@ app.whenReady().then(() => {
 
     // サーバー側で失効したアプリ登録を掴んだまま認証を始めない（失効していたら捨てて再登録に倒す）
     if (credentials && !(await validateAppCredentials(serverUrl, credentials))) {
-      store.delete(`oauth_app_${serverUrl}`)
+      credentials = undefined
+    }
+
+    // 要求するスコープが変わった場合（例: 画像添付対応でwrite:mediaを追加）は
+    // 古いスコープのままのアプリ登録を使い回さず、破棄して再登録する
+    if (credentials && credentials.scopes !== OAUTH_SCOPES) {
       credentials = undefined
     }
 
     if (!credentials) {
+      store.delete(`oauth_app_${serverUrl}`)
       const res = await fetch(`${serverUrl}/api/v1/apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_name: 'TootGun',
           redirect_uris: 'tootgun://oauth',
-          scopes: 'read:accounts write:statuses',
+          scopes: OAUTH_SCOPES,
           website: 'https://github.com/otera/TootGun'
         })
       })
       if (!res.ok) throw new Error(`アプリ登録失敗: HTTP ${res.status}`)
       const data = (await res.json()) as { client_id: string; client_secret: string }
-      credentials = { clientId: data.client_id, clientSecret: data.client_secret }
+      credentials = {
+        clientId: data.client_id,
+        clientSecret: data.client_secret,
+        scopes: OAUTH_SCOPES
+      }
       store.set(`oauth_app_${serverUrl}`, credentials)
     }
 
@@ -369,7 +449,7 @@ app.whenReady().then(() => {
     authUrl.searchParams.set('client_id', credentials.clientId)
     authUrl.searchParams.set('redirect_uri', 'tootgun://oauth')
     authUrl.searchParams.set('response_type', 'code')
-    authUrl.searchParams.set('scope', 'read:accounts write:statuses')
+    authUrl.searchParams.set('scope', OAUTH_SCOPES)
     authUrl.searchParams.set('code_challenge', codeChallenge)
     authUrl.searchParams.set('code_challenge_method', 'S256')
 

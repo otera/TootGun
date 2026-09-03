@@ -503,6 +503,131 @@ body,
   color: rgba(255, 170, 0, 0.4);
 }
 
+/* Attach */
+.attach-input {
+  display: none;
+}
+
+.attach-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 7px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
+}
+
+.attach-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.attach-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.attachments-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.attachment-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 96px;
+}
+
+.attachment-preview {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.attachment-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attachment-item.uploading .attachment-preview img {
+  opacity: 0.4;
+}
+
+.attachment-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text2);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.attachment-remove-btn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.attachment-remove-btn:hover {
+  background: var(--danger);
+}
+
+.attachment-alt-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  color: var(--text);
+  font-size: 10px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.attachment-alt-input:focus {
+  border-color: var(--accent);
+}
+
+.attachment-alt-input::placeholder {
+  color: var(--text3);
+}
+
+.attachment-error {
+  font-size: 10px;
+  color: var(--danger);
+}
+
 .visibility-select {
   background: var(--bg3);
   border: 1px solid var(--border);
