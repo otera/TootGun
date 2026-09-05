@@ -9,6 +9,14 @@ export interface MastodonAccount {
   url: string
 }
 
+/** サーバー独自のカスタム絵文字 */
+export interface CustomEmoji {
+  shortcode: string
+  url: string
+  static_url: string
+  category: string | null
+}
+
 export type Visibility = 'public' | 'unlisted' | 'private' | 'direct'
 
 export interface PostParams {
@@ -67,6 +75,7 @@ export interface ElectronAPI {
     post: (params: PostParams) => Promise<unknown>
     delete: (id: string) => Promise<unknown>
     verify: () => Promise<MastodonAccount>
+    customEmojis: () => Promise<CustomEmoji[]>
     startOAuth: (serverUrl: string) => Promise<void>
     onOAuthCallback: (callback: (data: OAuthCallbackData) => void) => () => void
   }

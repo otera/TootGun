@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import HashtagPanel from './HashtagPanel'
 import SparkEffect from './SparkEffect'
-import type { MastodonAccount, Visibility, Spark, PostHistory } from '../types'
+import EmojiPicker from './EmojiPicker'
+import EmojiAutocomplete from './EmojiAutocomplete'
+import { detectShortcodeQuery, insertionText, searchEmojis } from '../emoji/emojiIndex'
+import type { MastodonAccount, Visibility, Spark, PostHistory, CustomEmoji } from '../types'
 
 const MAX_CHARS = 500
 const UNDO_WINDOW_MS = 10000
@@ -45,10 +48,19 @@ function formatTime(isoString: string): string {
 }
 const MAIN_WIDTH = 400
 const HANDLE_WIDTH = 5
+const MAX_RECENT_EMOJIS = 24
 
 interface ComposerProps {
   account: MastodonAccount
   onLogout: () => void
+}
+
+/** ショートコード補完の状態。start は本文中の `:` の位置 */
+interface SuggestState {
+  start: number
+  query: string
+  candidates: CustomEmoji[]
+  index: number
 }
 
 /** 直前の投稿の取り消し情報。text/cwText はハッシュタグ付与前の原文を保持する */
@@ -79,6 +91,13 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [historyWidth, setHistoryWidth] = useState(DEFAULT_HISTORY_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
   const historyWidthRef = useRef(DEFAULT_HISTORY_WIDTH)
+  const [customEmojis, setCustomEmojis] = useState<CustomEmoji[]>([])
+  const [emojiLoading, setEmojiLoading] = useState(true)
+  const [recentEmojis, setRecentEmojis] = useState<CustomEmoji[]>([])
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [suggest, setSuggest] = useState<SuggestState | null>(null)
+  /** setText 後に復元するカーソル位置。絵文字挿入で使う */
+  const pendingCaretRef = useRef<number | null>(null)
   const cwInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -91,6 +110,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
       const savedAlwaysOnTop = (await window.api.store.get('alwaysOnTop')) as boolean | undefined
       const savedHistoryOpen = (await window.api.store.get('historyOpen')) as boolean | undefined
+      const savedRecent = (await window.api.store.get('recentEmojis')) as CustomEmoji[] | undefined
+      const cachedEmojis = (await window.api.store.get('customEmojisCache')) as
+        CustomEmoji[] | undefined
+      if (savedRecent) setRecentEmojis(savedRecent)
+      if (cachedEmojis) setCustomEmojis(cachedEmojis)
       if (savedHashtags) setHashtags(savedHashtags)
       if (savedActive) setActiveHashtags(savedActive)
       if (savedPosts) setLastPosts(savedPosts)
@@ -105,6 +129,21 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       }
     }
     load()
+
+    // サーバー独自絵文字を取得。前回のキャッシュを先に出しておき、取得できたら差し替える
+    async function loadCustomEmojis() {
+      try {
+        const list = await window.api.mastodon.customEmojis()
+        setCustomEmojis(list)
+        await window.api.store.set('customEmojisCache', list)
+      } catch {
+        // 取得失敗時はキャッシュ（なければ空）のまま。標準絵文字は使える
+      } finally {
+        setEmojiLoading(false)
+      }
+    }
+    loadCustomEmojis()
+
     textareaRef.current?.focus()
     return () => {
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
@@ -219,9 +258,116 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     }
   }
 
+  // 絵文字挿入後、React の再描画でカーソルが末尾へ飛ぶのを防ぐ
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current
+    if (caret === null) return
+    pendingCaretRef.current = null
+    const el = textareaRef.current
+    if (el) {
+      el.focus()
+      el.setSelectionRange(caret, caret)
+    }
+  }, [text])
+
+  /** カーソル直前の `:query` を見て補完候補を更新する */
+  const updateSuggest = useCallback(
+    (value: string, caret: number) => {
+      const hit = detectShortcodeQuery(value, caret)
+      if (!hit) {
+        setSuggest(null)
+        return
+      }
+      const candidates = searchEmojis(customEmojis, hit.query)
+      if (candidates.length === 0) {
+        setSuggest(null)
+        return
+      }
+      setSuggest((prev) => ({
+        start: hit.start,
+        query: hit.query,
+        candidates,
+        // 同じクエリの続きなら選択位置を保つ
+        index: prev && prev.start === hit.start ? Math.min(prev.index, candidates.length - 1) : 0
+      }))
+    },
+    [customEmojis]
+  )
+
+  const pushRecent = async (c: CustomEmoji) => {
+    const next = [c, ...recentEmojis.filter((r) => r.shortcode !== c.shortcode)].slice(
+      0,
+      MAX_RECENT_EMOJIS
+    )
+    setRecentEmojis(next)
+    await window.api.store.set('recentEmojis', next)
+  }
+
+  /**
+   * 本文の range を絵文字で置き換える（range 省略時はカーソル位置に挿入）。
+   * 直後に空白を1つ入れて、続けて打ちやすくする。
+   */
+  const insertEmoji = (c: CustomEmoji, range?: { start: number; end: number }) => {
+    const el = textareaRef.current
+    const start = range?.start ?? el?.selectionStart ?? text.length
+    const end = range?.end ?? el?.selectionEnd ?? text.length
+    const inserted = insertionText(c) + ' '
+    const next = text.slice(0, start) + inserted + text.slice(end)
+    pendingCaretRef.current = start + inserted.length
+    setText(next)
+    setSuggest(null)
+    pushRecent(c)
+  }
+
+  const applySuggestion = (c: CustomEmoji) => {
+    if (!suggest) return
+    insertEmoji(c, { start: suggest.start, end: suggest.start + suggest.query.length + 1 })
+  }
+
+  const handlePickerSelect = (c: CustomEmoji) => {
+    setPickerOpen(false)
+    insertEmoji(c)
+  }
+
+  const handlePickerClose = useCallback(() => {
+    setPickerOpen(false)
+    textareaRef.current?.focus()
+  }, [])
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value)
+    updateSuggest(e.target.value, e.target.selectionStart)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       handlePost()
+      return
+    }
+    if (!suggest) return
+
+    // 補完ポップアップ表示中のキー操作
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setSuggest({ ...suggest, index: (suggest.index + 1) % suggest.candidates.length })
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setSuggest({
+          ...suggest,
+          index: (suggest.index - 1 + suggest.candidates.length) % suggest.candidates.length
+        })
+        break
+      case 'Enter':
+      case 'Tab':
+        e.preventDefault()
+        applySuggestion(suggest.candidates[suggest.index])
+        break
+      case 'Escape':
+        e.preventDefault()
+        setSuggest(null)
+        break
     }
   }
 
@@ -335,15 +481,27 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               maxLength={500}
             />
           )}
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="今すぐブチ込め！"
-            className="toot-input"
-            rows={5}
-          />
+          <div className="toot-input-wrap">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => updateSuggest(text, e.currentTarget.selectionStart)}
+              onBlur={() => setSuggest(null)}
+              placeholder="今すぐブチ込め！"
+              className="toot-input"
+              rows={5}
+            />
+            {suggest && (
+              <EmojiAutocomplete
+                candidates={suggest.candidates}
+                selectedIndex={suggest.index}
+                onSelect={applySuggestion}
+                onHover={(i) => setSuggest({ ...suggest, index: i })}
+              />
+            )}
+          </div>
 
           {/* Visibility */}
           <div className="options-row">
@@ -364,6 +522,14 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
             <div className="options-right">
               <button
+                className={`emoji-toggle-btn ${pickerOpen ? 'active' : ''}`}
+                onClick={() => setPickerOpen((v) => !v)}
+                title="カスタム絵文字を挿入"
+                type="button"
+              >
+                😀
+              </button>
+              <button
                 className={`cw-toggle-btn ${cwEnabled ? 'active' : ''}`}
                 onClick={() => {
                   const next = !cwEnabled
@@ -382,6 +548,16 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               <span className={`char-count ${remainingClass}`}>{remaining}</span>
             </div>
           </div>
+
+          {pickerOpen && (
+            <EmojiPicker
+              customEmojis={customEmojis}
+              loading={emojiLoading}
+              recent={recentEmojis}
+              onSelect={handlePickerSelect}
+              onClose={handlePickerClose}
+            />
+          )}
 
           {/* Hashtag panel */}
           <HashtagPanel

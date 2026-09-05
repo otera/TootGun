@@ -287,6 +287,36 @@ app.whenReady().then(() => {
     }
   })
 
+  // Custom emojis (サーバー独自絵文字の一覧)。ピッカー非表示のものは除外する
+  ipcMain.handle('mastodon:customEmojis', async () => {
+    const serverUrl = store.get('serverUrl') as string | undefined
+    const token = store.get('token') as string | undefined
+    if (!serverUrl) throw new Error('未認証')
+    try {
+      const response = await fetch(`${serverUrl}/api/v1/custom_emojis`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const list = (await response.json()) as Array<{
+        shortcode: string
+        url: string
+        static_url: string
+        visible_in_picker: boolean
+        category?: string
+      }>
+      return list
+        .filter((e) => e.visible_in_picker !== false)
+        .map((e) => ({
+          shortcode: e.shortcode,
+          url: e.url,
+          static_url: e.static_url,
+          category: e.category ?? null
+        }))
+    } catch (e) {
+      throw new Error((e as Error).message)
+    }
+  })
+
   // Verify Mastodon token
   ipcMain.handle('mastodon:verify', async () => {
     const serverUrl = store.get('serverUrl') as string | undefined
