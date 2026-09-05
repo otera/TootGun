@@ -4,13 +4,21 @@ import SparkEffect from './SparkEffect'
 import EmojiPicker from './EmojiPicker'
 import EmojiAutocomplete from './EmojiAutocomplete'
 import { detectShortcodeQuery, insertionText, searchEmojis } from '../emoji/emojiIndex'
-import type { MastodonAccount, Visibility, Spark, PostHistory, CustomEmoji } from '../types'
+import type {
+  MastodonAccount,
+  Visibility,
+  Spark,
+  PostHistory,
+  CustomEmoji,
+  MediaAttachment
+} from '../types'
 
 const MAX_CHARS = 500
 const UNDO_WINDOW_MS = 10000
 const MIN_HISTORY_WIDTH = 180
 const MAX_HISTORY_WIDTH = 600
 const DEFAULT_HISTORY_WIDTH = 280
+const MAX_ATTACHMENTS = 4
 
 /**
  * 日付を「5分前」「2時間前」「3日前」のように相対的な表現に変換。
@@ -70,6 +78,17 @@ interface UndoState {
   cwText: string
 }
 
+/** コンポーザー内で管理する画像添付1件分の状態。アップロード完了後にmediaIdが入る */
+interface ComposerAttachment {
+  localId: string
+  file: File
+  previewUrl: string
+  description: string
+  mediaId?: string
+  uploading: boolean
+  error?: string
+}
+
 export default function Composer({ account, onLogout }: ComposerProps) {
   const [text, setText] = useState('')
   const [hashtags, setHashtags] = useState<string[]>([])
@@ -101,6 +120,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const cwInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
+  const attachmentsRef = useRef<ComposerAttachment[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  /** 画像ファイルをウィンドウ上にドラッグ中か（オーバーレイ表示用） */
+  const [dragOver, setDragOver] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -147,8 +171,13 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     textareaRef.current?.focus()
     return () => {
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
+      attachmentsRef.current.forEach((a) => URL.revokeObjectURL(a.previewUrl))
     }
   }, [])
+
+  useEffect(() => {
+    attachmentsRef.current = attachments
+  }, [attachments])
 
   const fullText = text
     ? text + (activeHashtags.length ? '\n\n' + activeHashtags.map((t) => `#${t}`).join(' ') : '')
@@ -156,7 +185,15 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
   const charCount = fullText.length + (cwEnabled ? cwText.length : 0)
   const remaining = MAX_CHARS - charCount
-  const canPost = text.trim().length > 0 && remaining >= 0 && !posting
+  const hasAttachments = attachments.length > 0
+  const attachmentsUploading = attachments.some((a) => a.uploading)
+  const attachmentsFailed = attachments.some((a) => a.error && !a.mediaId)
+  const canPost =
+    (text.trim().length > 0 || hasAttachments) &&
+    remaining >= 0 &&
+    !posting &&
+    !attachmentsUploading &&
+    !attachmentsFailed
 
   const fireEffect = useCallback(() => {
     setShaking(true)
@@ -185,6 +222,109 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     }
   }, [])
 
+  /** 選択された画像ファイルをMastodonへアップロードし、成功したらmediaIdを反映する */
+  const uploadAttachment = async (localId: string, file: File) => {
+    try {
+      const data = await file.arrayBuffer()
+      const media = (await window.api.mastodon.uploadMedia({
+        data,
+        filename: file.name,
+        mimeType: file.type
+      })) as MediaAttachment
+      setAttachments((prev) =>
+        prev.map((a) => (a.localId === localId ? { ...a, mediaId: media.id, uploading: false } : a))
+      )
+    } catch (err) {
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.localId === localId ? { ...a, uploading: false, error: (err as Error).message } : a
+        )
+      )
+    }
+  }
+
+  /** ファイル選択・ドロップ・ペーストのいずれかで渡された画像を添付に追加する */
+  const handleFilesSelected = (files: FileList | File[] | null) => {
+    if (!files || files.length === 0) return
+    const available = MAX_ATTACHMENTS - attachmentsRef.current.length
+    const selected = Array.from(files)
+      .filter((f) => f.type.startsWith('image/'))
+      .slice(0, Math.max(0, available))
+
+    const newAttachments: ComposerAttachment[] = selected.map((file) => ({
+      localId: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+      description: '',
+      uploading: true
+    }))
+    if (newAttachments.length === 0) return
+
+    setAttachments((prev) => [...prev, ...newAttachments])
+    newAttachments.forEach((a) => uploadAttachment(a.localId, a.file))
+  }
+
+  /** DataTransfer にファイルが含まれているか（テキストのドラッグでは反応させない） */
+  const hasFilePayload = (dt: DataTransfer | null) => !!dt && Array.from(dt.types).includes('Files')
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!hasFilePayload(e.dataTransfer)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = attachments.length >= MAX_ATTACHMENTS ? 'none' : 'copy'
+    if (!dragOver) setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // 子要素間の移動でも dragleave が飛ぶので、ウィンドウ外に出た時だけ解除する
+    const next = e.relatedTarget as Node | null
+    if (next && e.currentTarget.contains(next)) return
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    // Electron はファイルをドロップすると file:// へ遷移しようとするので常に抑止する
+    e.preventDefault()
+    setDragOver(false)
+    if (!hasFilePayload(e.dataTransfer)) return
+    handleFilesSelected(e.dataTransfer.files)
+  }
+
+  /** クリップボードに画像があれば添付として追加する。画像がなければ通常のテキストペーストに任せる */
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const images = Array.from(e.clipboardData.items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null)
+    if (images.length === 0) return
+    e.preventDefault()
+    handleFilesSelected(images)
+  }
+
+  const handleRemoveAttachment = (localId: string) => {
+    setAttachments((prev) => {
+      const target = prev.find((a) => a.localId === localId)
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((a) => a.localId !== localId)
+    })
+  }
+
+  const handleAltTextChange = (localId: string, value: string) => {
+    setAttachments((prev) =>
+      prev.map((a) => (a.localId === localId ? { ...a, description: value } : a))
+    )
+  }
+
+  /** Altテキストの入力欄からフォーカスが外れたタイミングでサーバーへ反映する */
+  const handleAltTextBlur = async (localId: string) => {
+    const attachment = attachmentsRef.current.find((a) => a.localId === localId)
+    if (!attachment || !attachment.mediaId) return
+    try {
+      await window.api.mastodon.updateMedia(attachment.mediaId, attachment.description)
+    } catch {
+      // Altテキストの反映失敗は投稿をブロックしない
+    }
+  }
+
   const handlePost = async () => {
     if (!canPost) return
 
@@ -192,10 +332,12 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     setError(null)
 
     try {
+      const mediaIds = attachments.filter((a) => a.mediaId).map((a) => a.mediaId as string)
       const posted = (await window.api.mastodon.post({
         status: fullText,
         visibility,
-        spoiler_text: cwEnabled ? cwText.trim() || undefined : undefined
+        spoiler_text: cwEnabled ? cwText.trim() || undefined : undefined,
+        media_ids: mediaIds.length > 0 ? mediaIds : undefined
       })) as { id?: string }
       fireEffect()
 
@@ -216,6 +358,8 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
       setText('')
       setCwText('')
+      attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl))
+      setAttachments([])
       textareaRef.current?.focus()
     } catch (err) {
       setError((err as Error).message)
@@ -426,8 +570,20 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   return (
     <div
       className={`composer-screen ${shaking ? 'shake' : ''} ${alwaysOnTop ? 'always-on-top' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {flash && <div className="muzzle-flash" />}
+      {dragOver && (
+        <div className="drop-overlay">
+          <div className="drop-overlay-inner">
+            {attachments.length >= MAX_ATTACHMENTS
+              ? `添付は最大${MAX_ATTACHMENTS}枚までです`
+              : '🖼 ここにドロップして添付'}
+          </div>
+        </div>
+      )}
       <SparkEffect sparks={sparks} />
 
       {/* Main area */}
@@ -487,6 +643,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               value={text}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               onClick={(e) => updateSuggest(text, e.currentTarget.selectionStart)}
               onBlur={() => setSuggest(null)}
               placeholder="今すぐブチ込め！"
@@ -521,6 +678,29 @@ export default function Composer({ account, onLogout }: ComposerProps) {
             </select>
 
             <div className="options-right">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="attach-input"
+                onChange={(e) => {
+                  handleFilesSelected(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+              <button
+                className="attach-btn"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={attachments.length >= MAX_ATTACHMENTS}
+                title={
+                  attachments.length >= MAX_ATTACHMENTS
+                    ? `画像は最大${MAX_ATTACHMENTS}枚まで`
+                    : '画像を添付'
+                }
+              >
+                🖼 {attachments.length > 0 ? `${attachments.length}/${MAX_ATTACHMENTS}` : ''}
+              </button>
               <button
                 className={`emoji-toggle-btn ${pickerOpen ? 'active' : ''}`}
                 onClick={() => setPickerOpen((v) => !v)}
@@ -557,6 +737,42 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               onSelect={handlePickerSelect}
               onClose={handlePickerClose}
             />
+          )}
+
+          {/* Attachments */}
+          {attachments.length > 0 && (
+            <div className="attachments-row">
+              {attachments.map((a) => (
+                <div
+                  key={a.localId}
+                  className={`attachment-item ${a.uploading ? 'uploading' : ''}`}
+                >
+                  <div className="attachment-preview">
+                    <img src={a.previewUrl} alt="" />
+                    {a.uploading && <div className="attachment-spinner">アップロード中…</div>}
+                    <button
+                      type="button"
+                      className="attachment-remove-btn"
+                      onClick={() => handleRemoveAttachment(a.localId)}
+                      title="添付を削除"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    className="attachment-alt-input"
+                    value={a.description}
+                    onChange={(e) => handleAltTextChange(a.localId, e.target.value)}
+                    onBlur={() => handleAltTextBlur(a.localId)}
+                    placeholder="Altテキスト（画像の説明）"
+                    maxLength={1500}
+                    disabled={a.uploading}
+                  />
+                  {a.error && <span className="attachment-error">{a.error}</span>}
+                </div>
+              ))}
+            </div>
           )}
 
           {/* Hashtag panel */}

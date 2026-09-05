@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('api', {
       const handler = (_: IpcRendererEvent, data: unknown) => callback(data)
       ipcRenderer.on('oauth:callback', handler)
       return () => ipcRenderer.removeListener('oauth:callback', handler)
-    }
+    },
+    uploadMedia: (params: unknown) => ipcRenderer.invoke('mastodon:uploadMedia', params),
+    updateMedia: (id: string, description: string) =>
+      ipcRenderer.invoke('mastodon:updateMedia', { id, description })
   }
 })
