@@ -123,6 +123,8 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
   const attachmentsRef = useRef<ComposerAttachment[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  /** 画像ファイルをウィンドウ上にドラッグ中か（オーバーレイ表示用） */
+  const [dragOver, setDragOver] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -241,9 +243,10 @@ export default function Composer({ account, onLogout }: ComposerProps) {
     }
   }
 
-  const handleFilesSelected = (files: FileList | null) => {
+  /** ファイル選択・ドロップ・ペーストのいずれかで渡された画像を添付に追加する */
+  const handleFilesSelected = (files: FileList | File[] | null) => {
     if (!files || files.length === 0) return
-    const available = MAX_ATTACHMENTS - attachments.length
+    const available = MAX_ATTACHMENTS - attachmentsRef.current.length
     const selected = Array.from(files)
       .filter((f) => f.type.startsWith('image/'))
       .slice(0, Math.max(0, available))
@@ -259,6 +262,42 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
     setAttachments((prev) => [...prev, ...newAttachments])
     newAttachments.forEach((a) => uploadAttachment(a.localId, a.file))
+  }
+
+  /** DataTransfer にファイルが含まれているか（テキストのドラッグでは反応させない） */
+  const hasFilePayload = (dt: DataTransfer | null) => !!dt && Array.from(dt.types).includes('Files')
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!hasFilePayload(e.dataTransfer)) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = attachments.length >= MAX_ATTACHMENTS ? 'none' : 'copy'
+    if (!dragOver) setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // 子要素間の移動でも dragleave が飛ぶので、ウィンドウ外に出た時だけ解除する
+    const next = e.relatedTarget as Node | null
+    if (next && e.currentTarget.contains(next)) return
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    // Electron はファイルをドロップすると file:// へ遷移しようとするので常に抑止する
+    e.preventDefault()
+    setDragOver(false)
+    if (!hasFilePayload(e.dataTransfer)) return
+    handleFilesSelected(e.dataTransfer.files)
+  }
+
+  /** クリップボードに画像があれば添付として追加する。画像がなければ通常のテキストペーストに任せる */
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const images = Array.from(e.clipboardData.items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null)
+    if (images.length === 0) return
+    e.preventDefault()
+    handleFilesSelected(images)
   }
 
   const handleRemoveAttachment = (localId: string) => {
@@ -531,8 +570,20 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   return (
     <div
       className={`composer-screen ${shaking ? 'shake' : ''} ${alwaysOnTop ? 'always-on-top' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {flash && <div className="muzzle-flash" />}
+      {dragOver && (
+        <div className="drop-overlay">
+          <div className="drop-overlay-inner">
+            {attachments.length >= MAX_ATTACHMENTS
+              ? `添付は最大${MAX_ATTACHMENTS}枚までです`
+              : '🖼 ここにドロップして添付'}
+          </div>
+        </div>
+      )}
       <SparkEffect sparks={sparks} />
 
       {/* Main area */}
@@ -592,6 +643,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               value={text}
               onChange={handleTextChange}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               onClick={(e) => updateSuggest(text, e.currentTarget.selectionStart)}
               onBlur={() => setSuggest(null)}
               placeholder="今すぐブチ込め！"
