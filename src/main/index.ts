@@ -31,6 +31,19 @@ type OAuthApp = { clientId: string; clientSecret: string }
 let pendingOAuth: OAuthPending | null = null
 
 /**
+ * APIリクエストがMastodon本体ではなく、その手前のCDN/WAF等のBot対策に止められた場合にtrue。
+ * Mastodon APIはエラー時も必ずJSON(`{"error": ...}`)を返すため、403でHTMLが返ってきたら
+ * 「人間確認ページ」のような保護機構が割り込んだと判断できる（Cloudflare等、製品を問わない）。
+ * この種の保護はブラウザ窓で通過させても発行されるcookieがブラウザのフィンガープリントに
+ * 紐づくため、アプリからのAPI呼び出しでは再利用できず、外部クライアント全般が利用不可になる。
+ * 単なる「HTTP 403」ではなく原因を明示するために判定する。
+ */
+function isBlockedByBotProtection(res: Response): boolean {
+  const contentType = res.headers.get('content-type') ?? ''
+  return res.status === 403 && contentType.includes('text/html')
+}
+
+/**
  * キャッシュ済みのアプリ登録がサーバー側でまだ有効か確認する。
  * Mastodonはトークンが紐づいていないアプリ登録を定期的に自動削除するため、
  * 古いclient_id/client_secretのまま認証を始めるとトークン交換で401になる。
@@ -355,6 +368,13 @@ app.whenReady().then(() => {
           website: 'https://github.com/otera/TootGun'
         })
       })
+      if (isBlockedByBotProtection(res)) {
+        throw new Error(
+          `${new URL(serverUrl).hostname} はサーバー手前のBot対策（人間確認など）によりアプリからの` +
+            'APIアクセスがブロックされています。VPNやプロキシを使っている場合は外して再試行してください。' +
+            'それでも変わらなければ、サーバー管理者に /api/ と /oauth/ を保護の対象外にするよう依頼してください'
+        )
+      }
       if (!res.ok) throw new Error(`アプリ登録失敗: HTTP ${res.status}`)
       const data = (await res.json()) as { client_id: string; client_secret: string }
       credentials = { clientId: data.client_id, clientSecret: data.client_secret }
