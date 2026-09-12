@@ -23,6 +23,23 @@ export interface PostParams {
   status: string
   visibility: Visibility
   spoiler_text?: string
+  media_ids?: string[]
+}
+
+// アップロード済みのメディア（画像等）添付情報
+export interface MediaAttachment {
+  id: string
+  type: string
+  url: string
+  preview_url: string
+  description: string | null
+}
+
+export interface UploadMediaParams {
+  data: ArrayBuffer
+  filename: string
+  mimeType: string
+  description?: string
 }
 
 export interface PostHistory {
@@ -78,6 +95,8 @@ export interface ElectronAPI {
     customEmojis: () => Promise<CustomEmoji[]>
     startOAuth: (serverUrl: string) => Promise<void>
     onOAuthCallback: (callback: (data: OAuthCallbackData) => void) => () => void
+    uploadMedia: (params: UploadMediaParams) => Promise<MediaAttachment>
+    updateMedia: (id: string, description: string) => Promise<MediaAttachment>
   }
 }
 
