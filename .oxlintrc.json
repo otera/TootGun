@@ -4,8 +4,14 @@
   "categories": {
     "correctness": "error"
   },
-  "rules": {},
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  },
   "env": {
     "builtin": true
-  }
+  },
+  "ignorePatterns": ["out/**", "dist/**", "node_modules/**"]
 }
