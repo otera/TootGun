@@ -4,14 +4,7 @@ import SparkEffect from './SparkEffect'
 import EmojiPicker from './EmojiPicker'
 import EmojiAutocomplete from './EmojiAutocomplete'
 import { detectShortcodeQuery, insertionText, searchEmojis } from '../emoji/emojiIndex'
-import type {
-  MastodonAccount,
-  Visibility,
-  Spark,
-  PostHistory,
-  CustomEmoji,
-  MediaAttachment
-} from '../types'
+import type { MastodonAccount, Visibility, Spark, PostHistory, CustomEmoji } from '../types'
 
 const MAX_CHARS = 500
 const UNDO_WINDOW_MS = 10000
@@ -128,15 +121,26 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
   useEffect(() => {
     async function load() {
-      const savedHashtags = (await window.api.store.get('hashtags')) as string[] | undefined
-      const savedActive = (await window.api.store.get('activeHashtags')) as string[] | undefined
-      const savedPosts = (await window.api.store.get('lastPosts')) as PostHistory[] | undefined
-      const savedVisibility = (await window.api.store.get('visibility')) as Visibility | undefined
-      const savedAlwaysOnTop = (await window.api.store.get('alwaysOnTop')) as boolean | undefined
-      const savedHistoryOpen = (await window.api.store.get('historyOpen')) as boolean | undefined
-      const savedRecent = (await window.api.store.get('recentEmojis')) as CustomEmoji[] | undefined
-      const cachedEmojis = (await window.api.store.get('customEmojisCache')) as
-        CustomEmoji[] | undefined
+      const { store } = window.api
+      const [
+        savedHashtags,
+        savedActive,
+        savedPosts,
+        savedVisibility,
+        savedAlwaysOnTop,
+        savedHistoryOpen,
+        savedRecent,
+        cachedEmojis
+      ] = await Promise.all([
+        store.get('hashtags'),
+        store.get('activeHashtags'),
+        store.get('lastPosts'),
+        store.get('visibility'),
+        store.get('alwaysOnTop'),
+        store.get('historyOpen'),
+        store.get('recentEmojis'),
+        store.get('customEmojisCache')
+      ])
       if (savedRecent) setRecentEmojis(savedRecent)
       if (cachedEmojis) setCustomEmojis(cachedEmojis)
       if (savedHashtags) setHashtags(savedHashtags)
@@ -226,11 +230,11 @@ export default function Composer({ account, onLogout }: ComposerProps) {
   const uploadAttachment = async (localId: string, file: File) => {
     try {
       const data = await file.arrayBuffer()
-      const media = (await window.api.mastodon.uploadMedia({
+      const media = await window.api.mastodon.uploadMedia({
         data,
         filename: file.name,
         mimeType: file.type
-      })) as MediaAttachment
+      })
       setAttachments((prev) =>
         prev.map((a) => (a.localId === localId ? { ...a, mediaId: media.id, uploading: false } : a))
       )
@@ -333,16 +337,16 @@ export default function Composer({ account, onLogout }: ComposerProps) {
 
     try {
       const mediaIds = attachments.filter((a) => a.mediaId).map((a) => a.mediaId as string)
-      const posted = (await window.api.mastodon.post({
+      const posted = await window.api.mastodon.post({
         status: fullText,
         visibility,
         spoiler_text: cwEnabled ? cwText.trim() || undefined : undefined,
         media_ids: mediaIds.length > 0 ? mediaIds : undefined
-      })) as { id?: string }
+      })
       fireEffect()
 
       const newPost: PostHistory = {
-        id: posted?.id,
+        id: posted.id,
         text: fullText,
         time: new Date().toISOString()
       }
@@ -350,7 +354,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       setLastPosts(updatedPosts)
       await window.api.store.set('lastPosts', updatedPosts)
 
-      if (posted?.id) {
+      if (posted.id) {
         if (undoTimerRef.current) clearTimeout(undoTimerRef.current)
         setUndo({ id: posted.id, text, cwText: cwEnabled ? cwText : '' })
         undoTimerRef.current = setTimeout(() => setUndo(null), UNDO_WINDOW_MS)
