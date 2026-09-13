@@ -10,7 +10,8 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist": "npm run build && electron-builder",
-    "check": "npm run lint && npm run type-check && npm run format:check",
+    "check": "npm run lint && npm run type-check && npm run format:check && npm run test",
+    "test": "vitest run",
     "type-check": "tsc -b --noEmit",
     "lint": "oxlint src",
     "lint:fix": "oxlint src --fix",
@@ -31,7 +32,8 @@
     "oxlint": "^1.81.0",
     "prettier": "^3.9.6",
     "typescript": "^6.0.3",
-    "vite": "^7.3.5"
+    "vite": "^7.3.5",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "electron-store": "^11.0.2",
