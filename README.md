@@ -44,6 +44,12 @@ npm install
 # 開発サーバー起動（ホットリロード）
 npm run dev
 
+# Lint / 型チェック / フォーマット / テストをまとめて実行
+npm run check
+
+# テストのみ
+npm run test
+
 # ビルド
 npm run build
 
@@ -63,17 +69,37 @@ npm run dist:win   # Windows (.exe)
 
 ```
 src/
-├── main/index.ts          # メインプロセス（IPC、Mastodon API呼び出し）
-├── preload/index.ts       # コンテキストブリッジ
+├── shared/types.ts          # main / preload / renderer で共有する型
+├── main/                    # メインプロセス
+│   ├── index.ts             # エントリ（アプリのライフサイクル、ディープリンク）
+│   ├── ipc.ts               # renderer から呼べる IPC の登録
+│   ├── mastodon.ts          # Mastodon API 呼び出し
+│   ├── oauth.ts             # OAuth（PKCE）フロー
+│   ├── store.ts             # 設定の永続化（electron-store）。認証情報はここに閉じる
+│   └── window.ts            # メインウィンドウの生成・サイズ管理
+├── preload/
+│   ├── index.ts             # コンテキストブリッジ（window.api）
+│   └── global.d.ts          # renderer 向けの window.api 型宣言
 └── renderer/src/
-    ├── App.tsx            # 画面ルーティング
-    └── components/
-        ├── Settings.tsx   # 接続設定
-        ├── Composer.tsx   # 投稿画面
-        ├── HashtagPanel.tsx
-        ├── EmojiPicker.tsx      # 絵文字ピッカー
-        ├── EmojiAutocomplete.tsx # ショートコード補完
-        └── SparkEffect.tsx
+    ├── App.tsx              # 画面ルーティング
+    ├── components/
+    │   ├── Settings.tsx     # 接続設定
+    │   ├── Composer.tsx     # 投稿画面
+    │   ├── HistoryPanel.tsx # 投稿ログ
+    │   ├── AttachmentList.tsx
+    │   ├── UndoBar.tsx      # 投稿の取り消し
+    │   ├── HashtagPanel.tsx
+    │   ├── EmojiPicker.tsx  # 絵文字ピッカー
+    │   ├── EmojiAutocomplete.tsx # ショートコード補完
+    │   └── SparkEffect.tsx
+    ├── hooks/               # Composer から切り出した状態管理
+    │   ├── useAttachments.ts
+    │   ├── useCustomEmojis.ts
+    │   ├── useEmojiInput.ts
+    │   ├── useHistoryPanel.ts
+    │   └── useFireEffect.ts
+    ├── emoji/emojiIndex.ts  # ショートコード検出・検索
+    └── utils/formatTime.ts
 ```
 
 ## ライセンス

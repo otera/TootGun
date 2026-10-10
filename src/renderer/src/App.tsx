@@ -29,8 +29,7 @@ export default function App() {
   }
 
   const handleLogout = async () => {
-    await window.api.store.delete('serverUrl')
-    await window.api.store.delete('token')
+    await window.api.mastodon.logout()
     setAccount(null)
     setScreen('settings')
   }
