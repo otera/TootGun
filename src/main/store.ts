@@ -32,7 +32,8 @@ export function setRendererValue<K extends RendererStoreKey>(
   key: K,
   value: RendererStoreSchema[K]
 ): void {
-  store.set(key, value)
+  // conf 16 の型はジェネリックな K から StoreSchema[K] を辿れないため明示する
+  store.set(key, value as Exclude<StoreSchema[K], undefined>)
 }
 
 // ---- 認証情報 ----
