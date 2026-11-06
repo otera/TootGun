@@ -54,7 +54,6 @@ export interface UploadMediaParams {
 }
 
 export interface OAuthCallbackData {
-  token?: string
   account?: MastodonAccount
   error?: string
 }

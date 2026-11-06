@@ -123,7 +123,7 @@ export async function handleOAuthCallback(
     })
 
     setCredentials({ serverUrl, token })
-    onResult({ token, account })
+    onResult({ account })
   } catch (e) {
     onResult({ error: (e as Error).message })
   }
