@@ -1,3 +1,5 @@
+// Tauri 版なら window.api を用意する（他の import より先に読み込む）
+import './api/tauriBridge'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'

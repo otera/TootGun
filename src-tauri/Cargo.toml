@@ -1,0 +1,41 @@
+[package]
+name = "tootgun"
+version = "1.0.0"
+description = "Mastodon高速投稿専用クライアント - 想いをブチ込め。"
+edition = "2021"
+rust-version = "1.80"
+
+[lib]
+name = "tootgun_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.4", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.5", features = [] }
+tauri-plugin-store = "2.5.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.153"
+# TLS は OS 標準（macOS: Security.framework / Windows: SChannel）を使い、バイナリを小さく保つ
+reqwest = { version = "0.13.5", default-features = false, features = [
+  "native-tls",
+  "json",
+  "multipart",
+  "charset",
+  "http2",
+  "system-proxy",
+] }
+url = "2.5.7"
+percent-encoding = "2.3.1"
+sha2 = "0.11.0"
+base64 = "0.23.0"
+getrandom = "0.4.2"
+
+[profile.release]
+# 配布サイズを小さくする設定
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
