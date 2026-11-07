@@ -4,6 +4,7 @@
 mod commands;
 mod mastodon;
 mod oauth;
+mod secrets;
 mod store;
 mod window;
 
@@ -12,6 +13,11 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .manage(oauth::PendingOAuth::default())
         .setup(|app| {
+            secrets::init()?;
+            // 平文で残っている旧形式のトークンを移す。失敗しても起動は続ける
+            if let Err(e) = store::migrate_plaintext_secrets(app.handle()) {
+                eprintln!("認証情報の移行に失敗しました: {e}");
+            }
             window::create_main_window(app.handle())?;
             Ok(())
         })

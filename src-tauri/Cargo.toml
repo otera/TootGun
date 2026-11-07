@@ -31,6 +31,15 @@ percent-encoding = "2.3.1"
 sha2 = "0.11.0"
 base64 = "0.23.0"
 getrandom = "0.4.2"
+# 認証情報は OS の資格情報ストアに保存する（macOS: 従来型キーチェーン / Windows: 資格情報マネージャー）
+keyring-core = "1.0.1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# "keychain" は署名・provisioning profile なしで使える従来型キーチェーン（"protected" は要 entitlement）
+apple-native-keyring-store = { version = "1.0.2", features = ["keychain"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "1.1.0"
 
 [profile.release]
 # 配布サイズを小さくする設定

@@ -39,17 +39,17 @@ fn generate_code_challenge(verifier: &str) -> String {
 }
 
 /// キャッシュ済みのアプリ登録を返す。失効していたり要求スコープが変わっていれば捨てて再登録する。
-async fn resolve_app(app: &AppHandle, server_url: &str) -> Result<OAuthApp, String> {
-    if let Some(cached) = store::get_oauth_app(app, server_url) {
+async fn resolve_app(server_url: &str) -> Result<OAuthApp, String> {
+    if let Some(cached) = store::get_oauth_app(server_url) {
         if cached.scopes.as_deref() == Some(OAUTH_SCOPES)
             && mastodon::validate_app_credentials(server_url, &cached).await
         {
             return Ok(cached);
         }
     }
-    store::delete_oauth_app(app, server_url)?;
+    store::delete_oauth_app(server_url)?;
     let oauth_app = mastodon::register_app(server_url).await?;
-    store::set_oauth_app(app, server_url, &oauth_app)?;
+    store::set_oauth_app(server_url, &oauth_app)?;
     Ok(oauth_app)
 }
 
@@ -57,7 +57,7 @@ async fn resolve_app(app: &AppHandle, server_url: &str) -> Result<OAuthApp, Stri
 /// 認可後のリダイレクト（tootgun://oauth?code=...）はウィンドウの遷移を横取りして受け取り、
 /// 結果は oauth:callback イベントで画面側に通知する（トークンそのものは通知しない）。
 pub async fn start(app: AppHandle, server_url: String) -> Result<(), String> {
-    let oauth_app = resolve_app(&app, &server_url).await?;
+    let oauth_app = resolve_app(&server_url).await?;
 
     let code_verifier = generate_code_verifier()?;
     let code_challenge = generate_code_challenge(&code_verifier);
@@ -134,7 +134,7 @@ async fn complete(app: &AppHandle, url: &str) -> Result<serde_json::Value, Strin
         Ok(token) => token,
         // アプリ登録の失効なら破棄し、次回の再登録で自己修復する
         Err(e) if e.app_revoked => {
-            store::delete_oauth_app(app, &pending.server_url)?;
+            store::delete_oauth_app(&pending.server_url)?;
             return Err(
                 "アプリ登録が失効していたためリセットしました。もう一度ログインしてください".into(),
             );
