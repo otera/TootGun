@@ -1,5 +1,5 @@
 //! TootGun の Tauri 版バックエンド。
-//! Electron 版の src/main に相当し、アクセストークンはこのプロセスの外（画面側）へ出さない。
+//! アクセストークンはこのプロセスの外（画面側）へ出さない。
 
 mod commands;
 mod mastodon;

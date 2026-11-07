@@ -40,7 +40,6 @@ body,
   font-size: 14px;
   line-height: 1.5;
   user-select: none;
-  -webkit-app-region: no-drag;
 }
 
 /* Scrollbar */
@@ -73,7 +72,6 @@ body,
 
 /* === Settings === */
 .settings-screen {
-  -webkit-app-region: drag;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -122,7 +120,6 @@ body,
   gap: 20px;
   width: 100%;
   max-width: 360px;
-  -webkit-app-region: no-drag;
 }
 
 .form-group {
@@ -212,7 +209,6 @@ body,
   gap: 16px;
   width: 100%;
   max-width: 360px;
-  -webkit-app-region: no-drag;
 }
 
 .oauth-spinner {
@@ -308,7 +304,6 @@ body,
   padding: 12px 16px;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
-  -webkit-app-region: drag;
   flex-shrink: 0;
 }
 
@@ -336,7 +331,6 @@ body,
   display: flex;
   align-items: center;
   gap: 8px;
-  -webkit-app-region: no-drag;
 }
 
 .avatar {
@@ -358,7 +352,6 @@ body,
     opacity 0.2s,
     border-color 0.2s,
     box-shadow 0.2s;
-  -webkit-app-region: no-drag;
   line-height: 1;
 }
 
@@ -394,7 +387,6 @@ body,
   transition:
     color 0.2s,
     border-color 0.2s;
-  -webkit-app-region: no-drag;
   white-space: nowrap;
 }
 
@@ -985,7 +977,6 @@ body,
   background: linear-gradient(180deg, #111d2e 0%, #0a1220 100%);
   border-bottom: 1px solid #1a2d48;
   flex-shrink: 0;
-  -webkit-app-region: drag;
 }
 
 .history-panel-title {
@@ -1026,7 +1017,6 @@ body,
   padding: 2px 5px;
   cursor: pointer;
   transition: all 0.15s;
-  -webkit-app-region: no-drag;
   line-height: 1;
 }
 
@@ -1144,7 +1134,6 @@ body,
   color: var(--text3);
   cursor: pointer;
   transition: all 0.2s;
-  -webkit-app-region: no-drag;
   font-family: 'Courier New', Courier, monospace;
 }
 

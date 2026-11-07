@@ -1,4 +1,4 @@
-//! メインウィンドウの作成とサイズ操作（Electron 版の src/main/window.ts に相当）。
+//! メインウィンドウの作成とサイズ操作。
 
 use tauri::{
     window::Color, AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow,
@@ -31,7 +31,7 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
             .background_color(Color(0x0d, 0x0d, 0x0d, 0xff))
             .theme(Some(tauri::Theme::Dark));
 
-    // macOS: タイトルバーを隠して信号機ボタンだけを残す（Electron 版の hiddenInset 相当）
+    // macOS: タイトルバーを隠して信号機ボタンだけを残す
     #[cfg(target_os = "macos")]
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)

@@ -1,5 +1,5 @@
-//! 画面側から呼べるコマンド（Electron 版の src/main/ipc.ts に相当）。
-//! 画面側の呼び出し口は src/renderer/src/api/tauriBridge.ts。
+//! 画面側から呼べるコマンド。
+//! 画面側の呼び出し口は src/renderer/src/api/index.ts。
 
 use percent_encoding::percent_decode_str;
 use reqwest::{multipart, Method};

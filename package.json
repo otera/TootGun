@@ -2,16 +2,10 @@
   "name": "tootgun",
   "version": "1.0.0",
   "description": "Mastodon高速投稿専用クライアント - 想いをブチ込め。",
-  "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "preview": "npm run build && electron-vite preview",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist": "npm run build && electron-builder",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:renderer": "vite build",
     "check": "npm run lint && npm run type-check && npm run format:check && npm run test",
     "test": "vitest run",
     "type-check": "tsc -b --noEmit",
@@ -22,15 +16,11 @@
     "ncu": "npm-check-updates"
   },
   "devDependencies": {
-    "@electron-toolkit/utils": "^4.0.0",
     "@tauri-apps/cli": "^2.12.4",
     "@types/node": "^26.6.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.2",
-    "electron": "^44.9.3",
-    "electron-builder": "^26.15.3",
-    "electron-vite": "^6.0.0",
     "npm-check-updates": "^23.1.0",
     "oxlint": "^1.81.0",
     "prettier": "^3.9.6",
@@ -40,38 +30,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
-    "electron-store": "^12.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
-  },
-  "build": {
-    "appId": "com.tootgun.app",
-    "productName": "TootGun",
-    "icon": "resources/icon",
-    "protocols": [
-      {
-        "name": "TootGun OAuth",
-        "schemes": [
-          "tootgun"
-        ]
-      }
-    ],
-    "mac": {
-      "category": "public.app-category.social-networking",
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "files": [
-      "out/**/*",
-      "resources/**/*"
-    ]
   }
 }

@@ -1,4 +1,4 @@
-//! OAuth（PKCE）によるログイン（Electron 版の src/main/oauth.ts に相当）。
+//! OAuth（PKCE）によるログイン。
 
 use std::sync::Mutex;
 

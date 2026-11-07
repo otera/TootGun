@@ -1,21 +1,15 @@
 /**
- * Tauri 版で動いているときに、Electron 版の preload と同じ形の `window.api` を用意する。
- * 画面側のコンポーネントはどちらで動いているかを意識しなくてよい。
- * 呼び出し先は src-tauri/src/commands.rs。Electron 版では何もしない。
+ * 画面側から使う `window.api` を用意する。呼び出し先は src-tauri/src/commands.rs。
  */
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import type { ElectronAPI } from '../../../preload/index'
+import type { Platform, TootGunAPI } from './types'
 import type {
   OAuthCallbackData,
   RendererStoreKey,
   RendererStoreSchema
 } from '../../../shared/types'
-
-function isTauri(): boolean {
-  return '__TAURI_INTERNALS__' in window
-}
 
 /** Rust 側のエラーは文字列で届くので、画面側が使う Error に揃える */
 async function call<T>(...args: Parameters<typeof invoke>): Promise<T> {
@@ -26,7 +20,7 @@ async function call<T>(...args: Parameters<typeof invoke>): Promise<T> {
   }
 }
 
-function detectPlatform(): NodeJS.Platform {
+function detectPlatform(): Platform {
   const ua = navigator.userAgent
   if (ua.includes('Mac')) return 'darwin'
   if (ua.includes('Windows')) return 'win32'
@@ -36,7 +30,7 @@ function detectPlatform(): NodeJS.Platform {
 /** ヘッダーには ASCII しか載らないので、ファイル名や説明文はエンコードして送る */
 const encodeHeader = (value: string): string => encodeURIComponent(value)
 
-const api: ElectronAPI = {
+const api: TootGunAPI = {
   platform: detectPlatform(),
   store: {
     get: async <K extends RendererStoreKey>(key: K) => {
@@ -82,14 +76,14 @@ const api: ElectronAPI = {
   }
 }
 
-/** CSS の -webkit-app-region でドラッグできる場所（Electron 版の指定と揃える） */
+/** ドラッグでウィンドウを動かせる場所 */
 const DRAG_REGIONS = '.settings-screen, .composer-header, .history-panel-header'
 const NO_DRAG_REGIONS =
   'button, input, textarea, select, a, .settings-form, .oauth-waiting, .account-info, .pin-btn, .logout-btn, .history-close-btn, .hist-btn'
 
 /**
- * macOS の WebView は -webkit-app-region を解釈しないので、
- * ドラッグできる場所でのマウス操作をウィンドウ移動に変換する。
+ * タイトルバーを隠しているので、ドラッグできる場所でのマウス操作をウィンドウ移動に変換する。
+ * WebView は -webkit-app-region を解釈しないため CSS ではなくここで扱う。
  */
 function enableWindowDrag(): void {
   document.addEventListener('mousedown', (e) => {
@@ -100,7 +94,5 @@ function enableWindowDrag(): void {
   })
 }
 
-if (isTauri()) {
-  window.api = api
-  enableWindowDrag()
-}
+window.api = api
+enableWindowDrag()

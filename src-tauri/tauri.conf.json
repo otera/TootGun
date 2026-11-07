@@ -4,10 +4,10 @@
   "version": "1.0.0",
   "identifier": "com.tootgun.client",
   "build": {
-    "beforeDevCommand": "npx vite --config vite.tauri.config.mts",
+    "beforeDevCommand": "npx vite",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "npx vite build --config vite.tauri.config.mts",
-    "frontendDist": "../out/tauri-renderer"
+    "beforeBuildCommand": "npx vite build",
+    "frontendDist": "../out/renderer"
   },
   "app": {
     "windows": [],

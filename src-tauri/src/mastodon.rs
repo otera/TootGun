@@ -1,4 +1,4 @@
-//! Mastodon API の呼び出し（Electron 版の src/main/mastodon.ts に相当）。
+//! Mastodon API の呼び出し。
 
 use std::sync::LazyLock;
 

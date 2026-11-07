@@ -11,5 +11,5 @@
     "noEmit": true,
     "outDir": "out"
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "electron.vite.config.ts", "vite.tauri.config.mts", "vitest.config.mts"]
+  "include": ["vite.config.mts", "vitest.config.mts"]
 }

@@ -1,4 +1,4 @@
-//! 設定と認証情報の保存（Electron 版の src/main/store.ts に相当）。
+//! 設定と認証情報の保存。
 
 use std::sync::Arc;
 
