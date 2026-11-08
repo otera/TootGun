@@ -125,7 +125,7 @@ export function useAttachments() {
   }
 
   const onDrop = (e: React.DragEvent) => {
-    // Electron はファイルをドロップすると file:// へ遷移しようとするので常に抑止する
+    // WebView はファイルをドロップするとそのファイルを開こうとするので常に抑止する
     e.preventDefault()
     setDragOver(false)
     if (!hasFilePayload(e.dataTransfer)) return
