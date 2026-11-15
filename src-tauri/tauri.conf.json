@@ -12,7 +12,11 @@
   "app": {
     "windows": [],
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "img-src": "'self' https: blob: data:",
+        "connect-src": "ipc: http://ipc.localhost"
+      }
     }
   },
   "bundle": {
