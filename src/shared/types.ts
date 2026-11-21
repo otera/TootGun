@@ -1,6 +1,6 @@
 /**
- * main / preload / renderer で共有する型。
- * Electron 固有の型や React 固有の型はここに置かない。
+ * 画面側と Rust 側（src-tauri）でやり取りするデータの型。
+ * React 固有の型はここに置かない。
  */
 
 // ---- Mastodon API ----
@@ -67,13 +67,6 @@ export interface PostHistory {
   time: string
 }
 
-/** Mastodonに登録したアプリの認証情報（サーバーごとにキャッシュする） */
-export interface OAuthApp {
-  clientId: string
-  clientSecret: string
-  scopes?: string
-}
-
 /** renderer から読み書きしてよい設定 */
 export interface RendererStoreSchema {
   hashtags: string[]
@@ -87,12 +80,3 @@ export interface RendererStoreSchema {
 }
 
 export type RendererStoreKey = keyof RendererStoreSchema
-
-/** electron-store に保存する全データ。認証情報は main プロセスの外へ出さない */
-export interface StoreSchema extends RendererStoreSchema {
-  serverUrl: string
-  token: string
-  windowWidth: number
-  windowHeight: number
-  [key: `oauth_app_${string}`]: OAuthApp
-}
