@@ -1,3 +1,4 @@
+import { X } from '@phosphor-icons/react'
 import type { PostHistory } from '../types'
 import { formatTime } from '../utils/formatTime'
 
@@ -28,8 +29,8 @@ export default function HistoryPanel({
       <div className="history-panel" style={{ width }}>
         <div className="history-panel-header">
           <span className="history-panel-title">AMMO LOG</span>
-          <button className="history-close-btn" onClick={onClose}>
-            ✕
+          <button className="history-close-btn" onClick={onClose} title="閉じる">
+            <X />
           </button>
         </div>
         <div className="history-list">

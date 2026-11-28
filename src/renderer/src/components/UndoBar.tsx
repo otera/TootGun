@@ -1,3 +1,5 @@
+import { PencilSimple, Trash } from '@phosphor-icons/react'
+
 interface UndoBarProps {
   /** カウントダウンの長さ。アニメーションの duration に使う */
   windowMs: number
@@ -19,7 +21,7 @@ export default function UndoBar({ windowMs, busy, onUndo }: UndoBarProps) {
           disabled={busy}
           title="直前のTootを削除"
         >
-          🗑 取消
+          <Trash /> 取消
         </button>
         <button
           className="undo-btn edit"
@@ -27,7 +29,7 @@ export default function UndoBar({ windowMs, busy, onUndo }: UndoBarProps) {
           disabled={busy}
           title="直前のTootを削除して本文を編集し直す"
         >
-          ✏️ 取消して編集
+          <PencilSimple /> 取消して編集
         </button>
       </div>
     </div>

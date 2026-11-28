@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { ImageSquare, PushPin, SignOut, Smiley } from '@phosphor-icons/react'
 import HashtagPanel from './HashtagPanel'
 import SparkEffect from './SparkEffect'
 import EmojiPicker from './EmojiPicker'
@@ -237,9 +238,13 @@ export default function Composer({ account, onLogout }: ComposerProps) {
       {attachments.dragOver && (
         <div className="drop-overlay">
           <div className="drop-overlay-inner">
-            {attachments.isFull
-              ? `添付は最大${MAX_ATTACHMENTS}枚までです`
-              : '🖼 ここにドロップして添付'}
+            {attachments.isFull ? (
+              `添付は最大${MAX_ATTACHMENTS}枚までです`
+            ) : (
+              <>
+                <ImageSquare /> ここにドロップして添付
+              </>
+            )}
           </div>
         </div>
       )}
@@ -265,7 +270,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               onClick={handleToggleAlwaysOnTop}
               title={alwaysOnTop ? '最前面固定: ON' : '最前面固定: OFF'}
             >
-              📌
+              <PushPin weight={alwaysOnTop ? 'fill' : 'bold'} />
             </button>
             <img
               src={account.avatar}
@@ -277,7 +282,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
               }}
             />
             <button className="logout-btn" onClick={onLogout} title="ログアウト">
-              ⏏ ログアウト
+              <SignOut /> ログアウト
             </button>
           </div>
         </div>
@@ -350,7 +355,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
                 disabled={attachments.isFull}
                 title={attachments.isFull ? `画像は最大${MAX_ATTACHMENTS}枚まで` : '画像を添付'}
               >
-                🖼{' '}
+                <ImageSquare />
                 {attachments.isEmpty ? '' : `${attachments.attachments.length}/${MAX_ATTACHMENTS}`}
               </button>
               <button
@@ -359,7 +364,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
                 title="カスタム絵文字を挿入"
                 type="button"
               >
-                😀
+                <Smiley />
               </button>
               <button
                 className={`cw-toggle-btn ${cwEnabled ? 'active' : ''}`}

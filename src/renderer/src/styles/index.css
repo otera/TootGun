@@ -346,6 +346,7 @@ body,
   border-radius: 4px;
   padding: 2px 6px;
   font-size: 14px;
+  color: var(--text2);
   cursor: pointer;
   opacity: 0.35;
   transition:
@@ -361,6 +362,7 @@ body,
 
 .pin-btn.active {
   opacity: 1;
+  color: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 0 8px rgba(255, 107, 0, 0.5);
   animation: pin-btn-pulse 2s ease-in-out infinite;
@@ -543,6 +545,7 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   border: 3px dashed var(--accent);
   border-radius: 12px;
   color: var(--accent);
@@ -1246,15 +1249,15 @@ body,
   font-size: 13px;
   line-height: 1;
   padding: 2px 6px;
+  color: var(--text3);
   cursor: pointer;
-  filter: grayscale(1) opacity(0.6);
   transition: all 0.15s;
 }
 
 .emoji-toggle-btn:hover,
 .emoji-toggle-btn.active {
   border-color: var(--accent);
-  filter: none;
+  color: var(--accent);
 }
 
 .emoji-toggle-btn.active {
@@ -1418,4 +1421,23 @@ body,
   width: 24px;
   height: 24px;
   object-fit: contain;
+}
+
+/* === Phosphor Icons === */
+/* アイコン付きボタンはアイコンと文字を縦中央で揃える */
+.pin-btn,
+.logout-btn,
+.attach-btn,
+.emoji-toggle-btn,
+.undo-btn,
+.history-close-btn,
+.emoji-picker-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+button svg {
+  flex-shrink: 0;
 }

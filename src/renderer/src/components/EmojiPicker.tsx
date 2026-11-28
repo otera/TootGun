@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { X } from '@phosphor-icons/react'
 import type { CustomEmoji } from '../types'
 import { searchEmojis } from '../emoji/emojiIndex'
 
@@ -101,7 +102,7 @@ export default function EmojiPicker({
           spellCheck={false}
         />
         <button className="emoji-picker-close" type="button" onClick={onClose} title="閉じる">
-          ✕
+          <X />
         </button>
       </div>
       <div className="emoji-picker-body">

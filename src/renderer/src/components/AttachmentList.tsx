@@ -1,3 +1,4 @@
+import { X } from '@phosphor-icons/react'
 import type { ComposerAttachment } from '../hooks/useAttachments'
 
 interface AttachmentListProps {
@@ -30,7 +31,7 @@ export default function AttachmentList({
               onClick={() => onRemove(a.localId)}
               title="添付を削除"
             >
-              ✕
+              <X size={10} weight="bold" />
             </button>
           </div>
           <input
