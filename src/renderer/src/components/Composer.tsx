@@ -17,6 +17,7 @@ import type { MastodonAccount, Visibility, PostHistory, CustomEmoji } from '../t
 const MAX_CHARS = 500
 const UNDO_WINDOW_MS = 10000
 const HISTORY_LIMIT = 10
+const SHORTCUT_LABEL = window.api.platform === 'darwin' ? '⌘Enter' : 'Ctrl+Enter'
 
 interface ComposerProps {
   account: MastodonAccount
@@ -416,7 +417,7 @@ export default function Composer({ account, onLogout }: ComposerProps) {
             // key で投稿ごとにカウントダウンのアニメーションをやり直す
             <UndoBar key={undo.id} windowMs={UNDO_WINDOW_MS} busy={undoBusy} onUndo={handleUndo} />
           ) : (
-            <p className="shortcut-hint">⌘Enter で即射</p>
+            <p className="shortcut-hint">{SHORTCUT_LABEL} で即射</p>
           )}
         </div>
       </div>
