@@ -29,7 +29,10 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
             .inner_size(width, height)
             .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
             .background_color(Color(0x0d, 0x0d, 0x0d, 0xff))
-            .theme(Some(tauri::Theme::Dark));
+            .theme(Some(tauri::Theme::Dark))
+            // Tauri のネイティブ D&D ハンドラが有効だと、Windows (WebView2) では
+            // HTML5 の dragover / drop がフロントに届かず画像のドロップ添付が効かない
+            .disable_drag_drop_handler();
 
     // macOS: タイトルバーを隠して信号機ボタンだけを残す
     #[cfg(target_os = "macos")]
